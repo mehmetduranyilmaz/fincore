@@ -1,0 +1,38 @@
+# Fincore
+
+Fincore is a modern financial management platform.
+
+## Goals
+
+- Learn and apply modern software architecture
+- Build a scalable financial application
+- Use Clean Architecture principles
+- Create production-ready mobile and backend systems
+
+## Technology Stack
+
+### Mobile
+- Flutter
+- Riverpod
+- Material 3
+
+### Backend
+- .NET
+- Clean Architecture
+- PostgreSQL / SQL Server
+
+## Architecture
+
+The project follows:
+
+- Clean Architecture
+- SOLID principles
+- Domain Driven Design concepts
+- Dependency Inversion
+
+## Development Environment
+
+- Ubuntu WSL
+- VS Code
+- GitHub
+- Flutter SDK
