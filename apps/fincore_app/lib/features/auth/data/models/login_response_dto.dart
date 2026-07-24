@@ -1,30 +1,31 @@
-import 'package:fincore_app/features/auth/data/models/user_dto.dart';
-import 'package:fincore_app/features/auth/domain/entities/auth_session.dart';
-
 final class LoginResponseDto {
   const LoginResponseDto({
     required this.accessToken,
     required this.refreshToken,
-    required this.user,
+    required this.expiresIn,
+    required this.tokenType,
+    required this.userId,
+    required this.email,
+    required this.fullName,
   });
 
   factory LoginResponseDto.fromJson(Map<String, dynamic> json) {
     return LoginResponseDto(
       accessToken: json['accessToken'] as String,
       refreshToken: json['refreshToken'] as String,
-      user: UserDto.fromJson(json['user'] as Map<String, dynamic>),
+      expiresIn: json['expiresIn'] as int,
+      tokenType: json['tokenType'] as String,
+      userId: json['userId'] as String,
+      email: json['email'] as String,
+      fullName: json['fullName'] as String,
     );
   }
 
   final String accessToken;
   final String refreshToken;
-  final UserDto user;
-
-  AuthSession toEntity() {
-    return AuthSession(
-      accessToken: accessToken,
-      refreshToken: refreshToken,
-      user: user.toEntity(),
-    );
-  }
+  final int expiresIn;
+  final String tokenType;
+  final String userId;
+  final String email;
+  final String fullName;
 }

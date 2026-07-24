@@ -1,16 +1,26 @@
 import 'package:dio/dio.dart';
 import 'package:fincore_app/core/config/environment.dart';
+import 'package:fincore_app/core/di/usecases.dart';
 import 'package:fincore_app/core/network/api_client.dart';
 import 'package:fincore_app/core/network/interceptors/auth_interceptor.dart';
 import 'package:fincore_app/core/network/interceptors/logging_interceptor.dart';
 import 'package:fincore_app/core/network/interceptors/retry_interceptor.dart';
+import 'package:fincore_app/core/network/refresh_token_coordinator.dart';
 import 'package:fincore_app/core/storage/token_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final environmentProvider = Provider<Environment>((ref) => Environment.dev);
 
-final dioProvider = Provider<Dio>((ref) {
+final Provider<RefreshTokenCoordinator> refreshTokenCoordinatorProvider =
+    Provider<RefreshTokenCoordinator>(
+      (ref) => RefreshTokenCoordinator(() async {
+        final session = await ref.read(refreshSessionProvider).execute();
+        return session.accessToken;
+      }, onRefreshFailure: () => ref.read(authSessionManagerProvider).logout()),
+    );
+
+final Provider<Dio> dioProvider = Provider<Dio>((ref) {
   final environment = ref.watch(environmentProvider);
   final dio = Dio(
     BaseOptions(
@@ -23,7 +33,11 @@ final dioProvider = Provider<Dio>((ref) {
   );
 
   dio.interceptors.addAll([
-    AuthInterceptor(ref.watch(tokenStorageProvider)),
+    AuthInterceptor(
+      dio,
+      ref.watch(tokenStorageProvider),
+      ref.watch(refreshTokenCoordinatorProvider),
+    ),
     RetryInterceptor(),
     if (kDebugMode) LoggingInterceptor(),
   ]);
@@ -33,6 +47,6 @@ final dioProvider = Provider<Dio>((ref) {
   return dio;
 });
 
-final apiClientProvider = Provider<ApiClient>(
+final Provider<ApiClient> apiClientProvider = Provider<ApiClient>(
   (ref) => ApiClient(ref.watch(dioProvider)),
 );

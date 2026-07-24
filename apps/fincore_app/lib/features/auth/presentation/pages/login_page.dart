@@ -1,5 +1,6 @@
+import 'package:fincore_app/app/state/app_controller.dart';
+import 'package:fincore_app/app/state/app_state.dart';
 import 'package:fincore_app/app/theme/app_spacing.dart';
-import 'package:fincore_app/features/auth/presentation/controllers/login_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -8,7 +9,7 @@ final class LoginPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(loginControllerProvider);
+    final state = ref.watch(appControllerProvider);
 
     return Scaffold(
       body: Center(
@@ -24,7 +25,7 @@ final class LoginPage extends ConsumerWidget {
 final class _LoginForm extends ConsumerStatefulWidget {
   const _LoginForm({required this.state});
 
-  final LoginState state;
+  final AppState state;
 
   @override
   ConsumerState<_LoginForm> createState() => _LoginFormState();
@@ -44,7 +45,7 @@ final class _LoginFormState extends ConsumerState<_LoginForm> {
   @override
   Widget build(BuildContext context) {
     final errorMessage = widget.state.errorMessage;
-    final isLoading = widget.state.isLoading;
+    final isLoading = widget.state.status == AppStatus.initializing;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -65,7 +66,7 @@ final class _LoginFormState extends ConsumerState<_LoginForm> {
           onPressed: isLoading
               ? null
               : () async {
-                  final controller = ref.read(loginControllerProvider.notifier);
+                  final controller = ref.read(appControllerProvider.notifier);
 
                   await controller.login(
                     email: _emailController.text,

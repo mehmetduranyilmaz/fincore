@@ -4,18 +4,22 @@ import 'package:fincore_app/core/network/exceptions/api_exception.dart';
 final class ApiClient {
   ApiClient(this._dio);
 
+  static const String requiresAuthKey = 'requiresAuth';
+
   final Dio _dio;
 
   Future<T?> get<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
+    bool requiresAuth = true,
   }) {
     return _request<T>(
       'GET',
       path,
       queryParameters: queryParameters,
       headers: headers,
+      requiresAuth: requiresAuth,
     );
   }
 
@@ -24,6 +28,7 @@ final class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
+    bool requiresAuth = true,
   }) {
     return _request<T>(
       'POST',
@@ -31,6 +36,7 @@ final class ApiClient {
       data: data,
       queryParameters: queryParameters,
       headers: headers,
+      requiresAuth: requiresAuth,
     );
   }
 
@@ -39,6 +45,7 @@ final class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
+    bool requiresAuth = true,
   }) {
     return _request<T>(
       'PUT',
@@ -46,6 +53,7 @@ final class ApiClient {
       data: data,
       queryParameters: queryParameters,
       headers: headers,
+      requiresAuth: requiresAuth,
     );
   }
 
@@ -54,6 +62,7 @@ final class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
+    bool requiresAuth = true,
   }) {
     return _request<T>(
       'DELETE',
@@ -61,6 +70,7 @@ final class ApiClient {
       data: data,
       queryParameters: queryParameters,
       headers: headers,
+      requiresAuth: requiresAuth,
     );
   }
 
@@ -70,13 +80,18 @@ final class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
     Map<String, dynamic>? headers,
+    required bool requiresAuth,
   }) async {
     try {
       final response = await _dio.request<T>(
         path,
         data: data,
         queryParameters: queryParameters,
-        options: Options(method: method, headers: headers),
+        options: Options(
+          method: method,
+          headers: headers,
+          extra: {requiresAuthKey: requiresAuth},
+        ),
       );
 
       return response.data;

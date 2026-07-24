@@ -1,30 +1,29 @@
-import 'package:fincore_app/app/router/app_routes.dart';
-import 'package:fincore_app/features/auth/domain/usecases/initialize_app.dart';
-import 'package:fincore_app/features/splash/presentation/providers/splash_provider.dart';
+import 'dart:async';
+
+import 'package:fincore_app/app/state/app_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-final class SplashPage extends ConsumerWidget {
+final class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.listen(splashInitializationProvider, (previous, next) {
-      next.whenData((result) {
-        if (!context.mounted) {
-          return;
-        }
+  ConsumerState<SplashPage> createState() => _SplashPageState();
+}
 
-        final location = switch (result) {
-          InitializationResult.authenticated => AppRoutes.dashboard,
-          InitializationResult.unauthenticated => AppRoutes.login,
-        };
-
-        context.go(location);
-      });
+final class _SplashPageState extends ConsumerState<SplashPage> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        unawaited(ref.read(appControllerProvider.notifier).initialize());
+      }
     });
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }

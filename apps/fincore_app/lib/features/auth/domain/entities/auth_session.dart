@@ -1,15 +1,21 @@
-import 'package:fincore_app/features/auth/domain/entities/user.dart';
-
 final class AuthSession {
   const AuthSession({
     required this.accessToken,
     required this.refreshToken,
-    required this.user,
+    required this.expiresIn,
+    required this.tokenType,
+    required this.userId,
+    required this.email,
+    required this.fullName,
   });
 
   final String accessToken;
   final String refreshToken;
-  final User user;
+  final int expiresIn;
+  final String tokenType;
+  final String userId;
+  final String email;
+  final String fullName;
 
   @override
   bool operator ==(Object other) {
@@ -17,9 +23,21 @@ final class AuthSession {
         other is AuthSession &&
             accessToken == other.accessToken &&
             refreshToken == other.refreshToken &&
-            user == other.user;
+            expiresIn == other.expiresIn &&
+            tokenType == other.tokenType &&
+            userId == other.userId &&
+            email == other.email &&
+            fullName == other.fullName;
   }
 
   @override
-  int get hashCode => Object.hash(accessToken, refreshToken, user);
+  int get hashCode => Object.hash(
+    accessToken,
+    refreshToken,
+    expiresIn,
+    tokenType,
+    userId,
+    email,
+    fullName,
+  );
 }

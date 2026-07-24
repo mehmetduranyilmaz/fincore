@@ -1,3 +1,4 @@
+import 'package:fincore_app/core/storage/access_token_reader.dart';
 import 'package:fincore_app/core/storage/secure_storage_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,7 +6,7 @@ final tokenStorageProvider = Provider<TokenStorage>(
   (ref) => TokenStorage(ref.watch(secureStorageServiceProvider)),
 );
 
-final class TokenStorage {
+final class TokenStorage implements AccessTokenReader {
   const TokenStorage(this._secureStorageService);
 
   static const String _accessTokenKey = 'access_token';
@@ -21,6 +22,7 @@ final class TokenStorage {
     return _secureStorageService.write(key: _refreshTokenKey, value: token);
   }
 
+  @override
   Future<String?> getAccessToken() {
     return _secureStorageService.read(key: _accessTokenKey);
   }
