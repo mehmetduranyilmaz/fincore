@@ -3,6 +3,7 @@ import 'package:fincore_app/features/auth/application/auth_session_manager.dart'
 import 'package:fincore_app/features/auth/domain/usecases/initialize_app.dart';
 import 'package:fincore_app/features/auth/domain/usecases/login_user.dart';
 import 'package:fincore_app/features/auth/domain/usecases/refresh_session.dart';
+import 'package:fincore_app/features/dashboard/domain/usecases/get_dashboard_summary.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final initializeAppProvider = Provider<InitializeApp>(
@@ -25,4 +26,9 @@ final Provider<AuthSessionManager> authSessionManagerProvider =
 final Provider<RefreshSession> refreshSessionProvider =
     Provider<RefreshSession>(
       (ref) => RefreshSession(ref.watch(authRepositoryProvider)),
+    );
+
+final Provider<GetDashboardSummary> getDashboardSummaryProvider =
+    Provider<GetDashboardSummary>(
+      (ref) => GetDashboardSummary(ref.watch(dashboardRepositoryProvider)),
     );

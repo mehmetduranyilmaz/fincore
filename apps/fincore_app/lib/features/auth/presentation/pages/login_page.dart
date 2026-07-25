@@ -1,6 +1,6 @@
 import 'package:fincore_app/app/state/app_controller.dart';
 import 'package:fincore_app/app/state/app_state.dart';
-import 'package:fincore_app/app/theme/app_spacing.dart';
+import 'package:fincore_app/core/theme/app_spacing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 

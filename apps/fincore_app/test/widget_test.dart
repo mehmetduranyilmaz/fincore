@@ -21,6 +21,23 @@ void main() {
 
     expect(find.text('Login'), findsOneWidget);
   });
+
+  testWidgets('opens the app shell for authenticated users', (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          authLocalDataSourceProvider.overrideWithValue(
+            const _AuthenticatedLocalDataSource(),
+          ),
+        ],
+        child: const FincoreApp(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fincore'), findsOneWidget);
+    expect(find.text('Dashboard'), findsWidgets);
+  });
 }
 
 final class _UnauthenticatedLocalDataSource implements AuthLocalDataSource {
@@ -37,6 +54,25 @@ final class _UnauthenticatedLocalDataSource implements AuthLocalDataSource {
 
   @override
   Future<bool> hasValidSession() => Future<bool>.value(false);
+
+  @override
+  Future<void> saveSession(AuthSession session) => Future<void>.value();
+}
+
+final class _AuthenticatedLocalDataSource implements AuthLocalDataSource {
+  const _AuthenticatedLocalDataSource();
+
+  @override
+  Future<void> clearSession() => Future<void>.value();
+
+  @override
+  Future<String?> getAccessToken() => Future<String?>.value('access_token');
+
+  @override
+  Future<String?> getRefreshToken() => Future<String?>.value('refresh_token');
+
+  @override
+  Future<bool> hasValidSession() => Future<bool>.value(true);
 
   @override
   Future<void> saveSession(AuthSession session) => Future<void>.value();

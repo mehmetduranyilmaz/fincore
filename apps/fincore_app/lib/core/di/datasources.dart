@@ -4,6 +4,7 @@ import 'package:fincore_app/features/auth/data/datasources/auth_local_data_sourc
 import 'package:fincore_app/features/auth/data/datasources/auth_local_data_source_impl.dart';
 import 'package:fincore_app/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:fincore_app/features/auth/data/datasources/auth_remote_data_source_impl.dart';
+import 'package:fincore_app/features/dashboard/data/datasources/dashboard_mock_data_source.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 final authLocalDataSourceProvider = Provider<AuthLocalDataSource>(
@@ -15,3 +16,6 @@ final Provider<AuthRemoteDataSource> authRemoteDataSourceProvider =
       (ref) =>
           AuthRemoteDataSourceImpl(apiClient: ref.watch(apiClientProvider)),
     );
+
+final Provider<DashboardDataSource> dashboardDataSourceProvider =
+    Provider<DashboardDataSource>((ref) => const DashboardMockDataSource());
