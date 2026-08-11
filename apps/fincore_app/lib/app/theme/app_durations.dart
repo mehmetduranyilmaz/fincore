@@ -1,5 +1,1 @@
-abstract final class AppDurations {
-  static const Duration fast = Duration(milliseconds: 150);
-  static const Duration normal = Duration(milliseconds: 300);
-  static const Duration slow = Duration(milliseconds: 600);
-}
+export 'package:fincore_app/core/theme/app_durations.dart';

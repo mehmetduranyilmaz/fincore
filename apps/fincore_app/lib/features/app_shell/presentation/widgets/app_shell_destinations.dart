@@ -25,6 +25,24 @@ abstract final class AppShellDestinations {
       selectedIcon: Icons.dashboard,
     ),
     AppShellDestinationData(
+      destination: AppShellDestination.transactions,
+      label: AppShellStrings.transactions,
+      icon: Icons.receipt_long_outlined,
+      selectedIcon: Icons.receipt_long,
+    ),
+    AppShellDestinationData(
+      destination: AppShellDestination.categories,
+      label: AppShellStrings.categories,
+      icon: Icons.category_outlined,
+      selectedIcon: Icons.category,
+    ),
+    AppShellDestinationData(
+      destination: AppShellDestination.budgets,
+      label: AppShellStrings.budgets,
+      icon: Icons.savings_outlined,
+      selectedIcon: Icons.savings,
+    ),
+    AppShellDestinationData(
       destination: AppShellDestination.customers,
       label: AppShellStrings.customers,
       icon: Icons.people_outline,
@@ -35,6 +53,12 @@ abstract final class AppShellDestinations {
       label: AppShellStrings.accounts,
       icon: Icons.account_balance_wallet_outlined,
       selectedIcon: Icons.account_balance_wallet,
+    ),
+    AppShellDestinationData(
+      destination: AppShellDestination.creditCards,
+      label: AppShellStrings.creditCards,
+      icon: Icons.credit_card_outlined,
+      selectedIcon: Icons.credit_card,
     ),
     AppShellDestinationData(
       destination: AppShellDestination.reports,

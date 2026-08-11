@@ -1,3 +1,4 @@
+import 'package:fincore_app/core/theme/app_durations.dart';
 import 'package:flutter/material.dart';
 
 final class AppButton extends StatelessWidget {
@@ -19,24 +20,42 @@ final class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final callback = isEnabled && !isLoading ? onPressed : null;
-    final content = isLoading
-        ? SizedBox.square(
-            dimension: 20,
-            child: CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.onPrimary,
-              strokeWidth: 2,
-            ),
-          )
-        : Text(label);
+    final content = AnimatedSwitcher(
+      duration: AppDurations.fast,
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: ScaleTransition(scale: animation, child: child),
+      ),
+      child: isLoading
+          ? SizedBox.square(
+              key: const ValueKey('loading'),
+              dimension: 20,
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.onPrimary,
+                strokeWidth: 2,
+              ),
+            )
+          : Text(label, key: const ValueKey('label')),
+    );
 
     if (icon == null || isLoading) {
-      return FilledButton(onPressed: callback, child: content);
+      return Semantics(
+        button: true,
+        enabled: callback != null,
+        child: FilledButton(onPressed: callback, child: content),
+      );
     }
 
-    return FilledButton.icon(
-      onPressed: callback,
-      icon: Icon(icon),
-      label: content,
+    return Semantics(
+      button: true,
+      enabled: callback != null,
+      child: FilledButton.icon(
+        onPressed: callback,
+        icon: Icon(icon),
+        label: content,
+      ),
     );
   }
 }

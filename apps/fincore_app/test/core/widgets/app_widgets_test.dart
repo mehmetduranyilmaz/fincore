@@ -53,6 +53,7 @@ void main() {
         ),
       ),
     );
+    await tester.pumpAndSettle();
 
     await tester.tap(find.text('Save'));
 
@@ -108,7 +109,7 @@ void main() {
       ),
     );
 
-    await tester.tap(find.text('Retry'));
+    await tester.tap(find.text('Tekrar Dene'));
 
     expect(find.text('Unable to load'), findsOneWidget);
     expect(retryCount, 1);

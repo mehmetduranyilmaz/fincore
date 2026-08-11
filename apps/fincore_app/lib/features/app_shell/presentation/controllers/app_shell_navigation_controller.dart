@@ -1,6 +1,16 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-enum AppShellDestination { dashboard, customers, accounts, reports, settings }
+enum AppShellDestination {
+  dashboard,
+  transactions,
+  categories,
+  budgets,
+  customers,
+  accounts,
+  creditCards,
+  reports,
+  settings,
+}
 
 final appShellNavigationControllerProvider =
     NotifierProvider<AppShellNavigationController, AppShellDestination>(

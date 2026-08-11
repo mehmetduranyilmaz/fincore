@@ -1,23 +1,49 @@
-import 'package:fincore_app/features/dashboard/domain/entities/category_spending.dart';
-import 'package:fincore_app/features/dashboard/domain/entities/recent_transaction.dart';
-import 'package:fincore_app/features/dashboard/domain/entities/upcoming_payment.dart';
-
 final class DashboardSummary {
-  DashboardSummary({
-    required this.totalBalance,
+  const DashboardSummary({
+    required this.totalAccountBalances,
+    required this.totalCreditCardDebt,
+    required this.totalAssets,
+    required this.netWorth,
+    required this.monthlyIncome,
     required this.monthlyExpense,
-    required this.creditCardDebt,
-    required List<UpcomingPayment> upcomingPayments,
-    required List<RecentTransaction> recentTransactions,
-    required List<CategorySpending> categorySpendings,
-  }) : upcomingPayments = List.unmodifiable(upcomingPayments),
-       recentTransactions = List.unmodifiable(recentTransactions),
-       categorySpendings = List.unmodifiable(categorySpendings);
+    required this.monthlyCashFlow,
+    required this.transactionCount,
+  });
 
-  final double totalBalance;
+  final double totalAccountBalances;
+  final double totalCreditCardDebt;
+  final double totalAssets;
+  final double netWorth;
+  final double monthlyIncome;
   final double monthlyExpense;
-  final double creditCardDebt;
-  final List<UpcomingPayment> upcomingPayments;
-  final List<RecentTransaction> recentTransactions;
-  final List<CategorySpending> categorySpendings;
+  final double monthlyCashFlow;
+  final int transactionCount;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        other is DashboardSummary &&
+            totalAccountBalances == other.totalAccountBalances &&
+            totalCreditCardDebt == other.totalCreditCardDebt &&
+            totalAssets == other.totalAssets &&
+            netWorth == other.netWorth &&
+            monthlyIncome == other.monthlyIncome &&
+            monthlyExpense == other.monthlyExpense &&
+            monthlyCashFlow == other.monthlyCashFlow &&
+            transactionCount == other.transactionCount;
+  }
+
+  @override
+  int get hashCode {
+    return Object.hash(
+      totalAccountBalances,
+      totalCreditCardDebt,
+      totalAssets,
+      netWorth,
+      monthlyIncome,
+      monthlyExpense,
+      monthlyCashFlow,
+      transactionCount,
+    );
+  }
 }

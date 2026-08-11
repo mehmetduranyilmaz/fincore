@@ -1,3 +1,4 @@
+import 'package:fincore_app/core/theme/app_spacing.dart';
 import 'package:fincore_app/features/app_shell/presentation/constants/app_shell_strings.dart';
 import 'package:fincore_app/features/app_shell/presentation/controllers/app_shell_navigation_controller.dart';
 import 'package:fincore_app/features/app_shell/presentation/widgets/responsive_app_shell.dart';
@@ -14,7 +15,17 @@ final class AppShellPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(AppShellStrings.appName),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.account_balance_rounded,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            const Text(AppShellStrings.appName),
+          ],
+        ),
         actions: const [UserMenu()],
       ),
       body: ResponsiveAppShell(

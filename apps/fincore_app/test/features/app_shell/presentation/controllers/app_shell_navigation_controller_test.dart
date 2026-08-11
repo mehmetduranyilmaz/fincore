@@ -14,11 +14,11 @@ void main() {
 
     container
         .read(appShellNavigationControllerProvider.notifier)
-        .select(AppShellDestination.customers);
+        .select(AppShellDestination.transactions);
 
     expect(
       container.read(appShellNavigationControllerProvider),
-      AppShellDestination.customers,
+      AppShellDestination.transactions,
     );
   });
 }

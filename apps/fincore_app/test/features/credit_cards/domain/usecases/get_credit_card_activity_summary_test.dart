@@ -1,0 +1,127 @@
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_activity_summary.dart';
+import 'package:fincore_app/features/transactions/data/datasources/transaction_mock_data_source.dart';
+import 'package:fincore_app/features/transactions/data/repositories/transaction_repository_impl.dart';
+import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
+import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
+import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test(
+    'uses only manual statements and leaves unassigned movements in period',
+    () async {
+      final repository = TransactionRepositoryImpl(
+        TransactionMockDataSource(
+          initialTransactions: [
+            _expense('statement', DateTime(2026, 7, 5), 100),
+            _expense('current', DateTime(2026, 8, 6), 40),
+            _expense('future', DateTime(2026, 9, 6), 25, installment: true),
+          ],
+        ),
+      );
+      final useCase = GetCreditCardActivitySummaryUseCase(
+        repository,
+        statementRepository: _StatementRepository([
+          CreditCardStatement(
+            id: 'statement-1',
+            creditCardId: _card.id,
+            statementDate: DateTime(2026, 8, 5),
+            dueDate: DateTime(2026, 8, 15),
+            createdAt: DateTime(2026, 8, 5),
+            lines: [
+              CreditCardStatementLine(
+                transactionId: 'statement',
+                description: 'statement',
+                transactionDate: DateTime(2026, 7, 5),
+                amount: 100,
+              ),
+            ],
+          ),
+        ]),
+        clock: () => DateTime(2026, 8, 7),
+      );
+
+      final summary = await useCase.execute(_card);
+
+      expect(summary.statementAmount, 100);
+      expect(summary.currentPeriodAmount, 40);
+      expect(summary.futureInstallmentAmount, 25);
+    },
+  );
+
+  test('future total starts after the upcoming statement cutoff', () async {
+    final repository = TransactionRepositoryImpl(
+      TransactionMockDataSource(
+        initialTransactions: [
+          _expense('august', DateTime(2026, 8, 15), 1000, installment: true),
+          _expense('september', DateTime(2026, 9, 15), 1000, installment: true),
+          _expense('october', DateTime(2026, 10, 15), 1000, installment: true),
+          _expense('november', DateTime(2026, 11, 15), 1000, installment: true),
+        ],
+      ),
+    );
+    final useCase = GetCreditCardActivitySummaryUseCase(
+      repository,
+      statementRepository: const _StatementRepository([]),
+      clock: () => DateTime(2026, 8, 8),
+    );
+
+    final summary = await useCase.execute(_card.copyWith(statementDay: 20));
+
+    expect(summary.futureInstallmentAmount, 3000);
+  });
+}
+
+final class _StatementRepository implements CreditCardStatementRepository {
+  const _StatementRepository(this.items);
+
+  final List<CreditCardStatement> items;
+
+  @override
+  Future<void> create(CreditCardStatement statement) async {}
+
+  @override
+  Future<List<CreditCardStatement>> getByCreditCardId(
+    String creditCardId,
+  ) async => items;
+}
+
+const _card = CreditCard(
+  id: 'card-1',
+  bankName: 'Test',
+  cardName: 'Kart',
+  lastFourDigits: '1234',
+  creditLimit: 1000,
+  statementDay: 5,
+  dueDay: 15,
+  currencyCode: 'TRY',
+  isArchived: false,
+);
+
+Transaction _expense(
+  String id,
+  DateTime date,
+  double amount, {
+  bool installment = false,
+}) {
+  return Transaction(
+    id: id,
+    accountId: null,
+    creditCardId: _card.id,
+    amount: amount,
+    transactionType: TransactionType.expense,
+    categoryId: null,
+    merchant: id,
+    note: null,
+    transactionDate: date,
+    source: TransactionSource.manual,
+    isDeleted: false,
+    installmentPlanId: installment ? 'plan-1' : null,
+    installmentNumber: installment ? 2 : null,
+    installmentCount: installment ? 2 : null,
+    installmentTotalAmount: installment ? 50 : null,
+  );
+}

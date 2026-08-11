@@ -1,20 +1,12 @@
 abstract final class DashboardStrings {
-  static const String title = 'Dashboard';
-  static const String totalBalance = 'Total Balance';
-  static const String monthlyExpense = 'Monthly Expense';
-  static const String creditCardDebt = 'Credit Card Debt';
-  static const String upcomingPayments = 'Upcoming Payments';
-  static const String recentTransactions = 'Recent Transactions';
-  static const String categorySpending = 'Category Spending';
-  static const String noUpcomingPayments = 'No upcoming payments';
-  static const String noUpcomingPaymentsDescription =
-      'Scheduled payments will appear here.';
-  static const String noRecentTransactions = 'No recent transactions';
-  static const String noRecentTransactionsDescription =
-      'Your latest transactions will appear here.';
-  static const String noCategorySpending = 'No category spending';
-  static const String noCategorySpendingDescription =
-      'Spending distribution will appear here.';
-  static const String unableToLoad = 'Dashboard could not be loaded.';
-  static const String retry = 'Retry';
+  static const String title = 'Gösterge Paneli';
+  static const String netWorth = 'Net Değer';
+  static const String totalAccountBalances = 'Toplam Hesap Bakiyesi';
+  static const String totalCreditCardDebt = 'Toplam Kredi Kartı Borcu';
+  static const String monthlyIncome = 'Aylık Gelir';
+  static const String monthlyExpense = 'Aylık Gider';
+  static const String monthlyCashFlow = 'Aylık Nakit Akışı';
+  static const String transactionCount = 'İşlem Sayısı';
+  static const String unableToLoad = 'Gösterge paneli yüklenemedi.';
+  static const String retry = 'Tekrar Dene';
 }

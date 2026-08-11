@@ -1,8 +1,6 @@
 import 'package:fincore_app/app/theme/app_theme.dart';
-import 'package:fincore_app/core/di/providers.dart';
-import 'package:fincore_app/features/dashboard/domain/entities/dashboard_summary.dart';
-import 'package:fincore_app/features/dashboard/domain/repositories/dashboard_repository.dart';
 import 'package:fincore_app/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:fincore_app/features/dashboard/presentation/providers/dashboard_summary_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,11 +19,14 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('dashboard_mobile_layout')), findsOneWidget);
-    expect(find.text('Total Balance'), findsOneWidget);
-    expect(find.text('Upcoming Payments'), findsOneWidget);
-    expect(find.text('Recent Transactions'), findsOneWidget);
-    expect(find.text('Category Spending'), findsOneWidget);
-    expect(find.text('Test Transaction'), findsOneWidget);
+    expect(find.text('Net Değer'), findsOneWidget);
+    expect(find.text('Toplam Hesap Bakiyesi'), findsOneWidget);
+    expect(find.text('Toplam Kredi Kartı Borcu'), findsOneWidget);
+    expect(find.text('Aylık Gelir'), findsOneWidget);
+    expect(find.text('Aylık Gider'), findsOneWidget);
+    expect(find.text('Aylık Nakit Akışı'), findsOneWidget);
+    expect(find.text('İşlem Sayısı'), findsOneWidget);
+    expect(find.text('95.000,00 ₺'), findsOneWidget);
   });
 
   testWidgets('renders dashboard sections in the desktop layout', (
@@ -39,16 +40,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('dashboard_desktop_layout')), findsOneWidget);
-    expect(find.text('Test Payment'), findsOneWidget);
-    expect(find.text('Test Category'), findsOneWidget);
+    expect(find.text('100.000,00 ₺'), findsOneWidget);
+    expect(find.text('5.000,00 ₺'), findsOneWidget);
+    expect(find.text('12'), findsOneWidget);
   });
 }
 
 Widget _dashboardApp() {
   return ProviderScope(
     overrides: [
-      dashboardRepositoryProvider.overrideWithValue(
-        _DashboardRepository(createDashboardSummary()),
+      dashboardSummaryProvider.overrideWith(
+        (ref) async => createDashboardSummary(),
       ),
     ],
     child: MaterialApp(
@@ -56,13 +58,4 @@ Widget _dashboardApp() {
       home: const Scaffold(body: DashboardPage()),
     ),
   );
-}
-
-final class _DashboardRepository implements DashboardRepository {
-  const _DashboardRepository(this.summary);
-
-  final DashboardSummary summary;
-
-  @override
-  Future<DashboardSummary> getSummary() async => summary;
 }

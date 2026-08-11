@@ -12,6 +12,8 @@ final class FincoreApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       title: 'Fincore',
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ThemeMode.system,
       routerConfig: ref.watch(appRouterProvider),
     );
   }

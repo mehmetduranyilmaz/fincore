@@ -16,4 +16,15 @@ void main() {
     expect(buttonShape.borderRadius, AppRadius.mdBorderRadius);
     expect(theme.inputDecorationTheme.border, isA<OutlineInputBorder>());
   });
+
+  test('provides a Material 3 dark theme with matching component shapes', () {
+    final theme = AppTheme.dark;
+    final cardShape = theme.cardTheme.shape! as RoundedRectangleBorder;
+
+    expect(theme.useMaterial3, isTrue);
+    expect(theme.brightness, Brightness.dark);
+    expect(cardShape.borderRadius, AppRadius.lgBorderRadius);
+    expect(theme.navigationBarTheme.indicatorColor, isNotNull);
+    expect(theme.navigationRailTheme.indicatorColor, isNotNull);
+  });
 }

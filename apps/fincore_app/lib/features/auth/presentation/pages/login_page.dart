@@ -1,6 +1,10 @@
 import 'package:fincore_app/app/state/app_controller.dart';
 import 'package:fincore_app/app/state/app_state.dart';
+import 'package:fincore_app/core/theme/app_durations.dart';
 import 'package:fincore_app/core/theme/app_spacing.dart';
+import 'package:fincore_app/core/widgets/app_button.dart';
+import 'package:fincore_app/core/widgets/app_card.dart';
+import 'package:fincore_app/core/widgets/app_text_field.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -15,7 +19,13 @@ final class LoginPage extends ConsumerWidget {
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppSpacing.md),
-          child: SizedBox(width: 360, child: _LoginForm(state: state)),
+          child: SizedBox(
+            width: 400,
+            child: AppCard(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: _LoginForm(state: state),
+            ),
+          ),
         ),
       ),
     );
@@ -50,40 +60,72 @@ final class _LoginFormState extends ConsumerState<_LoginForm> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextField(
+        const Icon(Icons.account_balance_rounded, size: AppSpacing.xxl),
+        const SizedBox(height: AppSpacing.md),
+        Text(
+          'Fincore',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          'Finansınıza güvenle erişin.',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        AppTextField(
           controller: _emailController,
           keyboardType: TextInputType.emailAddress,
-          decoration: const InputDecoration(labelText: 'Email'),
+          label: 'E-posta',
+          prefixIcon: const Icon(Icons.mail_outline),
+          textInputAction: TextInputAction.next,
         ),
         const SizedBox(height: AppSpacing.md),
-        TextField(
+        AppTextField(
           controller: _passwordController,
           obscureText: true,
-          decoration: const InputDecoration(labelText: 'Password'),
+          label: 'Şifre',
+          prefixIcon: const Icon(Icons.lock_outline),
+          textInputAction: TextInputAction.done,
         ),
         const SizedBox(height: AppSpacing.lg),
-        FilledButton(
-          onPressed: isLoading
-              ? null
-              : () async {
-                  final controller = ref.read(appControllerProvider.notifier);
+        SizedBox(
+          width: double.infinity,
+          child: AppButton(
+            label: 'Giriş Yap',
+            icon: Icons.login,
+            isLoading: isLoading,
+            onPressed: isLoading
+                ? null
+                : () async {
+                    final controller = ref.read(appControllerProvider.notifier);
 
-                  await controller.login(
-                    email: _emailController.text,
-                    password: _passwordController.text,
-                  );
-                },
-          child: isLoading
-              ? const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Text('Login'),
+                    await controller.login(
+                      email: _emailController.text,
+                      password: _passwordController.text,
+                    );
+                  },
+          ),
         ),
-        if (errorMessage != null) ...[
-          const SizedBox(height: AppSpacing.md),
-          Text(errorMessage),
-        ],
+        AnimatedSwitcher(
+          duration: AppDurations.fast,
+          child: errorMessage == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  key: ValueKey(errorMessage),
+                  padding: const EdgeInsets.only(top: AppSpacing.md),
+                  child: Text(
+                    errorMessage,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+        ),
       ],
     );
   }

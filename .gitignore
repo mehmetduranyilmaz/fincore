@@ -1,0 +1,5 @@
+# Local IDE settings
+/.vscode/
+
+# Temporary standalone OCR experiment
+/apps/fincore_app/receipt_ocr_test/

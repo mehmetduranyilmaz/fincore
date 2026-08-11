@@ -4,9 +4,6 @@ import 'package:fincore_app/features/dashboard/domain/entities/dashboard_summary
 import 'package:fincore_app/features/dashboard/presentation/constants/dashboard_breakpoints.dart';
 import 'package:fincore_app/features/dashboard/presentation/constants/dashboard_strings.dart';
 import 'package:fincore_app/features/dashboard/presentation/widgets/balance_summary_card.dart';
-import 'package:fincore_app/features/dashboard/presentation/widgets/category_spending_section.dart';
-import 'package:fincore_app/features/dashboard/presentation/widgets/recent_transactions_section.dart';
-import 'package:fincore_app/features/dashboard/presentation/widgets/upcoming_payments_section.dart';
 import 'package:flutter/material.dart';
 
 final class DashboardContent extends StatelessWidget {
@@ -44,12 +41,6 @@ final class _MobileDashboard extends StatelessWidget {
           const AppSectionHeader(title: DashboardStrings.title),
           const SizedBox(height: AppSpacing.md),
           BalanceSummaryCard(summary: summary),
-          const SizedBox(height: AppSpacing.md),
-          UpcomingPaymentsSection(payments: summary.upcomingPayments),
-          const SizedBox(height: AppSpacing.md),
-          RecentTransactionsSection(transactions: summary.recentTransactions),
-          const SizedBox(height: AppSpacing.md),
-          CategorySpendingSection(categories: summary.categorySpendings),
         ],
       ),
     );
@@ -75,27 +66,6 @@ final class _DesktopDashboard extends StatelessWidget {
               const AppSectionHeader(title: DashboardStrings.title),
               const SizedBox(height: AppSpacing.lg),
               BalanceSummaryCard(summary: summary),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: UpcomingPaymentsSection(
-                      payments: summary.upcomingPayments,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.lg),
-                  Expanded(
-                    child: CategorySpendingSection(
-                      categories: summary.categorySpendings,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              RecentTransactionsSection(
-                transactions: summary.recentTransactions,
-              ),
             ],
           ),
         ),
