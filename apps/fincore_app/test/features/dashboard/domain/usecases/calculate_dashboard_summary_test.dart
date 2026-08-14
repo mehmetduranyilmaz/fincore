@@ -36,13 +36,13 @@ void main() {
       result,
       const DashboardSummary(
         totalAccountBalances: 1700,
-        totalCreditCardDebt: 250,
+        totalCreditCardDebt: 350,
         totalAssets: 1700,
-        netWorth: 1450,
+        netWorth: 1350,
         monthlyIncome: 1500,
         monthlyExpense: 500,
         monthlyCashFlow: 1000,
-        transactionCount: 7,
+        transactionCount: 8,
       ),
     );
   });
@@ -93,6 +93,15 @@ List<Transaction> _transactions() {
       type: TransactionType.income,
     ),
     _transaction(
+      id: 'customer-card-payment',
+      creditCardId: 'credit-card-1',
+      amount: 100,
+      type: TransactionType.expense,
+      customerId: 'customer-1',
+      customerBalanceDelta: 100,
+      paymentGroupId: 'customer-payment-group',
+    ),
+    _transaction(
       id: 'old-income',
       accountId: 'account-1',
       amount: 400,
@@ -117,6 +126,9 @@ Transaction _transaction({
   required TransactionType type,
   DateTime? date,
   bool isDeleted = false,
+  String? customerId,
+  double? customerBalanceDelta,
+  String? paymentGroupId,
 }) {
   return Transaction(
     id: id,
@@ -131,6 +143,9 @@ Transaction _transaction({
     source: TransactionSource.manual,
     isDeleted: isDeleted,
     transferGroupId: type == TransactionType.transfer ? 'group-1' : null,
+    customerId: customerId,
+    customerBalanceDelta: customerBalanceDelta,
+    paymentGroupId: paymentGroupId,
   );
 }
 

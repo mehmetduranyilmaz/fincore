@@ -28,6 +28,7 @@ final class TransactionDto {
         installmentTotalAmount: (json['installmentTotalAmount'] as num?)
             ?.toDouble(),
         paymentGroupId: json['paymentGroupId'] as String?,
+        creditCardStatementId: json['creditCardStatementId'] as String?,
         customerId: json['customerId'] as String?,
         customerBalanceDelta: (json['customerBalanceDelta'] as num?)
             ?.toDouble(),
@@ -56,6 +57,7 @@ final class TransactionDto {
       'installmentCount': transaction.installmentCount,
       'installmentTotalAmount': transaction.installmentTotalAmount,
       'paymentGroupId': transaction.paymentGroupId,
+      'creditCardStatementId': transaction.creditCardStatementId,
       'customerId': transaction.customerId,
       'customerBalanceDelta': transaction.customerBalanceDelta,
     };

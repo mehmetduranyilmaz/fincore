@@ -19,6 +19,7 @@ void main() {
       source: TransactionSource.manual,
       isDeleted: false,
       paymentGroupId: 'group-1',
+      creditCardStatementId: 'statement-1',
       customerId: 'customer-1',
       customerBalanceDelta: -100,
     );
@@ -51,6 +52,7 @@ void main() {
     }).transaction;
 
     expect(restored.paymentGroupId, isNull);
+    expect(restored.creditCardStatementId, isNull);
     expect(restored.customerId, isNull);
   });
 }

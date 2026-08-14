@@ -88,6 +88,14 @@ final _transactions = [
     amount: 700,
     type: TransactionType.income,
   ),
+  _transaction(
+    id: 'customer-card-payment',
+    creditCardId: 'usd-card',
+    amount: 400,
+    customerId: 'customer-1',
+    customerBalanceDelta: 400,
+    paymentGroupId: 'customer-payment-group',
+  ),
 ];
 
 Transaction _transaction({
@@ -99,6 +107,9 @@ Transaction _transaction({
   DateTime? date,
   bool isDeleted = false,
   TransactionType type = TransactionType.expense,
+  String? customerId,
+  double? customerBalanceDelta,
+  String? paymentGroupId,
 }) {
   return Transaction(
     id: id,
@@ -112,6 +123,9 @@ Transaction _transaction({
     transactionDate: date ?? DateTime(2026, 8, 5),
     source: TransactionSource.manual,
     isDeleted: isDeleted,
+    customerId: customerId,
+    customerBalanceDelta: customerBalanceDelta,
+    paymentGroupId: paymentGroupId,
   );
 }
 

@@ -49,7 +49,7 @@ final class GetCreditCardActivitySummaryUseCase {
         continue;
       }
       final signedAmount = _signedAmount(transaction);
-      if (transaction.paymentGroupId == null &&
+      if (!transaction.isCreditCardDebtPayment &&
           !assignedIds.contains(transaction.id) &&
           !transaction.transactionDate.isAfter(now)) {
         currentPeriodAmount += signedAmount;

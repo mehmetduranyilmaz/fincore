@@ -6,6 +6,7 @@ import 'package:fincore_app/features/credit_cards/domain/errors/credit_card_oper
 import 'package:fincore_app/features/customers/domain/errors/customer_operation_exception.dart';
 import 'package:fincore_app/features/accounts/domain/errors/account_operation_exception.dart';
 import 'package:fincore_app/features/categories/domain/errors/category_operation_exception.dart';
+import 'package:fincore_app/features/auth/domain/errors/user_credentials_exception.dart';
 
 abstract final class ErrorMapper {
   static String map(Object error) {
@@ -14,6 +15,7 @@ abstract final class ErrorMapper {
       CategoryOperationException() => error.message,
       CreditCardOperationException() => error.message,
       CustomerOperationException() => error.message,
+      UserCredentialsException() => error.message,
       DioException() => 'Sunucuya ulaşılamadı.',
       SocketException() => 'İnternet bağlantısı bulunamadı.',
       TimeoutException() => 'İstek zaman aşımına uğradı.',

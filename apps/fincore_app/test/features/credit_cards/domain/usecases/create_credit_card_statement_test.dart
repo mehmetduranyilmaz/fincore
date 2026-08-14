@@ -46,7 +46,7 @@ void main() {
   });
 
   test(
-    'candidate query excludes payments and previously assigned lines',
+    'candidate query excludes card debt payments and assigned lines',
     () async {
       final statements = _StatementRepository([
         CreditCardStatement(
@@ -70,6 +70,7 @@ void main() {
         _TransactionRepository([
           _expense('assigned', DateTime(2026, 8, 3), 10),
           _expense('available', DateTime(2026, 8, 5), 20),
+          _customerCardPayment('customer-payment', DateTime(2026, 8, 5), 22750),
           _payment('payment', DateTime(2026, 8, 5), 15),
           _expense('future', DateTime(2026, 8, 6), 30),
         ]),
@@ -80,7 +81,10 @@ void main() {
         statementDate: DateTime(2026, 8, 5),
       );
 
-      expect(result.map((item) => item.id), ['available']);
+      expect(result.map((item) => item.id).toSet(), {
+        'available',
+        'customer-payment',
+      });
     },
   );
 
@@ -147,6 +151,24 @@ Transaction _payment(String id, DateTime date, double amount) => Transaction(
   isDeleted: false,
   paymentGroupId: 'payment-group',
 );
+
+Transaction _customerCardPayment(String id, DateTime date, double amount) =>
+    Transaction(
+      id: id,
+      accountId: null,
+      creditCardId: _card.id,
+      amount: amount,
+      transactionType: TransactionType.expense,
+      categoryId: null,
+      merchant: id,
+      note: null,
+      transactionDate: date,
+      source: TransactionSource.manual,
+      isDeleted: false,
+      paymentGroupId: 'customer-payment-group',
+      customerId: 'customer-1',
+      customerBalanceDelta: amount,
+    );
 
 final class _StatementRepository implements CreditCardStatementRepository {
   _StatementRepository([List<CreditCardStatement> seed = const []])

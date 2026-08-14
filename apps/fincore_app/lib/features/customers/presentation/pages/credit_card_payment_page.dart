@@ -9,18 +9,25 @@ import 'package:fincore_app/core/widgets/app_loading_view.dart';
 import 'package:fincore_app/core/widgets/app_text_field.dart';
 import 'package:fincore_app/features/accounts/presentation/controllers/accounts_controller.dart';
 import 'package:fincore_app/features/credit_cards/presentation/providers/credit_card_balance_provider.dart';
+import 'package:fincore_app/features/credit_cards/presentation/providers/credit_card_statements_provider.dart';
 import 'package:fincore_app/features/customers/domain/entities/credit_card_payment_input.dart';
 import 'package:fincore_app/features/customers/presentation/constants/customer_strings.dart';
 import 'package:fincore_app/features/customers/presentation/controllers/customer_commands_controller.dart';
 import 'package:fincore_app/features/transactions/presentation/widgets/expense_date_field.dart';
+import 'package:fincore_app/features/transactions/presentation/formatters/payment_source_formatter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 final class CreditCardPaymentPage extends ConsumerStatefulWidget {
-  const CreditCardPaymentPage({required this.creditCardId, super.key});
+  const CreditCardPaymentPage({
+    required this.creditCardId,
+    this.statementId,
+    super.key,
+  });
 
   final String creditCardId;
+  final String? statementId;
 
   @override
   ConsumerState<CreditCardPaymentPage> createState() =>
@@ -34,6 +41,7 @@ final class _CreditCardPaymentPageState
   final _descriptionController = TextEditingController();
   late DateTime _paymentDate;
   String? _accountId;
+  bool _statementAmountApplied = false;
 
   @override
   void initState() {
@@ -58,10 +66,34 @@ final class _CreditCardPaymentPageState
   Widget build(BuildContext context) {
     final card = ref.watch(creditCardProvider(widget.creditCardId));
     final balance = ref.watch(creditCardBalanceProvider(widget.creditCardId));
+    final statementStatus = widget.statementId == null
+        ? null
+        : ref.watch(
+            creditCardStatementPaymentStatusProvider((
+              creditCardId: widget.creditCardId,
+              statementId: widget.statementId!,
+            )),
+          );
+    final loadedStatementStatus = statementStatus?.value;
+    if (!_statementAmountApplied && loadedStatementStatus != null) {
+      _statementAmountApplied = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _amountController.text.isNotEmpty) return;
+        _amountController.text = AppFormatters.decimal(
+          loadedStatementStatus.remainingAmount,
+        );
+      });
+    }
     final accounts = ref.watch(accountsControllerProvider).accounts;
     final command = ref.watch(customerCommandsControllerProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text(CustomerStrings.cardPayment)),
+      appBar: AppBar(
+        title: Text(
+          widget.statementId == null
+              ? CustomerStrings.cardPayment
+              : 'Ekstre Ödemesi',
+        ),
+      ),
       body: card.when(
         loading: () => const AppLoadingView(),
         error: (error, stackTrace) => Center(child: Text(error.toString())),
@@ -92,6 +124,44 @@ final class _CreditCardPaymentPageState
                             'Güncel Borç: ${AppFormatters.currency(item.currentDebt, currencyCode: value.currencyCode)}',
                           ),
                         ),
+                        if (statementStatus != null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          statementStatus.when(
+                            loading: () => const LinearProgressIndicator(),
+                            error: (_, _) => Text(
+                              'Ekstre ödeme bilgileri yüklenemedi.',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                            ),
+                            data: (status) => AppCard(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(
+                                    '${AppFormatters.date(status.statement.statementDate)} ekstresi',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  Text(
+                                    'Ekstre: ${AppFormatters.currency(status.statement.totalAmount, currencyCode: value.currencyCode)}',
+                                  ),
+                                  Text(
+                                    'Ödenen: ${AppFormatters.currency(status.paidAmount, currencyCode: value.currencyCode)}',
+                                  ),
+                                  Text(
+                                    'Kalan: ${AppFormatters.currency(status.remainingAmount, currencyCode: value.currencyCode)}',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.md),
                         DropdownButtonFormField<String>(
                           initialValue: _accountId,
@@ -104,7 +174,9 @@ final class _CreditCardPaymentPageState
                                   account.currencyCode == value.currencyCode)
                                 DropdownMenuItem(
                                   value: account.id,
-                                  child: Text(account.name),
+                                  child: Text(
+                                    '${PaymentSourceFormatter.account(account)} • ${account.name}',
+                                  ),
                                 ),
                           ],
                           validator: (value) =>
@@ -155,7 +227,11 @@ final class _CreditCardPaymentPageState
                           label: CustomerStrings.save,
                           isLoading:
                               command.status == CustomerCommandStatus.loading,
-                          onPressed: _submit,
+                          onPressed:
+                              statementStatus?.isLoading == true ||
+                                  loadedStatementStatus?.isPaid == true
+                              ? null
+                              : _submit,
                         ),
                       ],
                     ),
@@ -190,6 +266,7 @@ final class _CreditCardPaymentPageState
             amount: AppFormatters.tryParseDecimal(_amountController.text)!,
             description: _descriptionController.text,
             paymentDate: _paymentDate,
+            statementId: widget.statementId,
           ),
         );
     if (success && mounted) context.pop();

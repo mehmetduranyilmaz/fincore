@@ -1,8 +1,11 @@
 import 'package:fincore_app/features/accounts/domain/repositories/account_repository.dart';
 import 'package:fincore_app/features/accounts/domain/usecases/calculate_account_balance.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/calculate_credit_card_balance.dart';
+import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_statement_payment_status.dart';
 import 'package:fincore_app/features/customers/domain/entities/credit_card_payment_input.dart';
+import 'package:fincore_app/features/customers/domain/errors/customer_operation_exception.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
@@ -17,6 +20,7 @@ final class CreateCreditCardPaymentUseCase {
     this._transactionRepository,
     this._accountRepository,
     this._creditCardRepository,
+    this._creditCardStatementRepository,
     this._calculateAccountBalance,
     this._calculateCreditCardBalance, {
     PaymentClock? clock,
@@ -29,6 +33,7 @@ final class CreateCreditCardPaymentUseCase {
   final TransactionRepository _transactionRepository;
   final AccountRepository _accountRepository;
   final CreditCardRepository _creditCardRepository;
+  final CreditCardStatementRepository _creditCardStatementRepository;
   final CalculateAccountBalanceUseCase _calculateAccountBalance;
   final CalculateCreditCardBalanceUseCase _calculateCreditCardBalance;
   final PaymentClock _clock;
@@ -58,11 +63,29 @@ final class CreateCreditCardPaymentUseCase {
       input.fromAccountId,
     );
     if (accountBalance.currentBalance < input.amount) {
-      throw StateError('Insufficient account balance.');
+      throw const CustomerOperationException(
+        'Seçilen kasa veya banka hesabında yeterli bakiye yok.',
+      );
     }
     final cardBalance = await _calculateCreditCardBalance.execute(card.id);
     if (input.amount > cardBalance.currentDebt) {
-      throw StateError('Payment exceeds credit card debt.');
+      throw const CustomerOperationException(
+        'Ödeme tutarı güncel kredi kartı borcunu aşamaz.',
+      );
+    }
+    if (input.statementId case final statementId?) {
+      final status = await GetCreditCardStatementPaymentStatusUseCase(
+        _creditCardStatementRepository,
+        _transactionRepository,
+      ).execute(creditCardId: card.id, statementId: statementId);
+      if (status.isPaid) {
+        throw const CustomerOperationException('Bu ekstre zaten ödendi.');
+      }
+      if (input.amount - status.remainingAmount > 0.005) {
+        throw const CustomerOperationException(
+          'Ödeme tutarı ekstrenin kalan borcunu aşamaz.',
+        );
+      }
     }
 
     final groupId = _groupIdGenerator();
@@ -83,6 +106,7 @@ final class CreateCreditCardPaymentUseCase {
         source: TransactionSource.manual,
         isDeleted: false,
         paymentGroupId: groupId,
+        creditCardStatementId: input.statementId,
       ),
       Transaction(
         id: _idGenerator(1),
@@ -97,6 +121,7 @@ final class CreateCreditCardPaymentUseCase {
         source: TransactionSource.manual,
         isDeleted: false,
         paymentGroupId: groupId,
+        creditCardStatementId: input.statementId,
       ),
     ]);
     await _transactionRepository.createMany(transactions);
@@ -109,6 +134,9 @@ final class CreateCreditCardPaymentUseCase {
     }
     if (input.paymentDate.isAfter(_clock())) {
       throw ArgumentError.value(input.paymentDate, 'paymentDate');
+    }
+    if (input.statementId != null && input.statementId!.trim().isEmpty) {
+      throw ArgumentError.value(input.statementId, 'statementId');
     }
   }
 

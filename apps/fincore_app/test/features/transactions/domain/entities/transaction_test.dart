@@ -30,23 +30,51 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('distinguishes card debt payments from customer card payments', () {
+    final cardDebtPayment = _createTransaction(
+      accountId: null,
+      creditCardId: 'credit-card-1',
+      transactionType: TransactionType.income,
+      paymentGroupId: 'card-payment-group',
+    );
+    final customerCardPayment = _createTransaction(
+      accountId: null,
+      creditCardId: 'credit-card-1',
+      transactionType: TransactionType.expense,
+      paymentGroupId: 'customer-payment-group',
+      customerId: 'customer-1',
+      customerBalanceDelta: 100,
+    );
+
+    expect(cardDebtPayment.isCreditCardDebtPayment, isTrue);
+    expect(customerCardPayment.isCreditCardDebtPayment, isFalse);
+    expect(customerCardPayment.isCustomerPayment, isTrue);
+  });
 }
 
 Transaction _createTransaction({
   required String? accountId,
   required String? creditCardId,
+  TransactionType transactionType = TransactionType.expense,
+  String? paymentGroupId,
+  String? customerId,
+  double? customerBalanceDelta,
 }) {
   return Transaction(
     id: 'transaction-1',
     accountId: accountId,
     creditCardId: creditCardId,
     amount: 100,
-    transactionType: TransactionType.expense,
+    transactionType: transactionType,
     categoryId: null,
     merchant: 'Test',
     note: null,
     transactionDate: DateTime(2026),
     source: TransactionSource.manual,
     isDeleted: false,
+    paymentGroupId: paymentGroupId,
+    customerId: customerId,
+    customerBalanceDelta: customerBalanceDelta,
   );
 }

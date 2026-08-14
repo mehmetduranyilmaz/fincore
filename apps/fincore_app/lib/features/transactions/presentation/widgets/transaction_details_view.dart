@@ -50,9 +50,7 @@ final class TransactionDetailsView extends StatelessWidget {
           ),
           _DetailRow(
             label: TransactionStrings.type,
-            value: TransactionStrings.transactionType(
-              transaction.transactionType,
-            ),
+            value: TransactionStrings.transactionTypeFor(transaction),
           ),
           _DetailRow(
             label: TransactionStrings.source,

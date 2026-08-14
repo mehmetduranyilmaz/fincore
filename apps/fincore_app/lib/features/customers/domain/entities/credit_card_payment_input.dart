@@ -5,6 +5,7 @@ final class CreditCardPaymentInput {
     required this.amount,
     required this.description,
     required this.paymentDate,
+    this.statementId,
   });
 
   final String creditCardId;
@@ -12,4 +13,5 @@ final class CreditCardPaymentInput {
   final double amount;
   final String description;
   final DateTime paymentDate;
+  final String? statementId;
 }

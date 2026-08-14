@@ -3,6 +3,7 @@ import 'package:fincore_app/features/customers/domain/entities/customer_payment_
 abstract final class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
+  static const String profile = '/profile';
   static const String dashboard = '/dashboard';
   static const String createManualExpense = '/transactions/manual-expense';
   static const String createManualIncome = '/transactions/manual-income';
@@ -61,8 +62,17 @@ abstract final class AppRoutes {
     return '/credit-cards/${Uri.encodeComponent(creditCardId)}/edit';
   }
 
-  static String creditCardPaymentLocation(String creditCardId) {
-    return '/credit-cards/${Uri.encodeComponent(creditCardId)}/payment';
+  static String creditCardPaymentLocation(
+    String creditCardId, {
+    String? statementId,
+  }) {
+    final path = '/credit-cards/${Uri.encodeComponent(creditCardId)}/payment';
+    return statementId == null
+        ? path
+        : Uri(
+            path: path,
+            queryParameters: {'statementId': statementId},
+          ).toString();
   }
 
   static String creditCardStatementsLocation(String creditCardId) {

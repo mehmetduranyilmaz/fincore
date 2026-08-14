@@ -9,6 +9,8 @@ import 'package:fincore_app/features/auth/application/auth_session_manager.dart'
 import 'package:fincore_app/features/auth/domain/usecases/initialize_app.dart';
 import 'package:fincore_app/features/auth/domain/usecases/login_user.dart';
 import 'package:fincore_app/features/auth/domain/usecases/refresh_session.dart';
+import 'package:fincore_app/features/auth/domain/usecases/get_user_credentials_profile.dart';
+import 'package:fincore_app/features/auth/domain/usecases/update_user_credentials.dart';
 import 'package:fincore_app/features/budgets/domain/usecases/calculate_budget_progress.dart';
 import 'package:fincore_app/features/budgets/domain/usecases/create_budget.dart';
 import 'package:fincore_app/features/budgets/domain/usecases/delete_budget.dart';
@@ -30,6 +32,7 @@ import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_car
 import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_payment_calendar.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/create_credit_card_statement.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_statement_candidates.dart';
+import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_statement_payment_status.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_statements.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/update_credit_card.dart';
 import 'package:fincore_app/features/dashboard/domain/usecases/calculate_dashboard_summary.dart';
@@ -78,6 +81,15 @@ final Provider<RefreshSession> refreshSessionProvider =
     Provider<RefreshSession>(
       (ref) => RefreshSession(ref.watch(authRepositoryProvider)),
     );
+
+final getUserCredentialsProfileProvider = Provider<GetUserCredentialsProfile>(
+  (ref) =>
+      GetUserCredentialsProfile(ref.watch(userCredentialsRepositoryProvider)),
+);
+
+final updateUserCredentialsProvider = Provider<UpdateUserCredentials>(
+  (ref) => UpdateUserCredentials(ref.watch(userCredentialsRepositoryProvider)),
+);
 
 final Provider<CalculateDashboardSummaryUseCase>
 calculateDashboardSummaryProvider = Provider<CalculateDashboardSummaryUseCase>(
@@ -220,6 +232,15 @@ final Provider<GetCreditCardStatementsUseCase> getCreditCardStatementsProvider =
       ),
     );
 
+final Provider<GetCreditCardStatementPaymentStatusUseCase>
+getCreditCardStatementPaymentStatusProvider =
+    Provider<GetCreditCardStatementPaymentStatusUseCase>(
+      (ref) => GetCreditCardStatementPaymentStatusUseCase(
+        ref.watch(creditCardStatementRepositoryProvider),
+        ref.watch(transactionRepositoryProvider),
+      ),
+    );
+
 final Provider<GetCreditCardStatementCandidatesUseCase>
 getCreditCardStatementCandidatesProvider =
     Provider<GetCreditCardStatementCandidatesUseCase>(
@@ -284,6 +305,7 @@ final Provider<CreateCreditCardPaymentUseCase> createCreditCardPaymentProvider =
         ref.watch(transactionRepositoryProvider),
         ref.watch(accountRepositoryProvider),
         ref.watch(creditCardRepositoryProvider),
+        ref.watch(creditCardStatementRepositoryProvider),
         ref.watch(calculateAccountBalanceProvider),
         ref.watch(calculateCreditCardBalanceProvider),
       ),

@@ -37,7 +37,7 @@ final class GetCreditCardStatementCandidatesUseCase {
     final candidates = transactions.where((transaction) {
       return transaction.creditCardId == creditCardId &&
           !transaction.isDeleted &&
-          transaction.paymentGroupId == null &&
+          !transaction.isCreditCardDebtPayment &&
           transaction.transactionType != TransactionType.transfer &&
           transaction.transactionDate.isBefore(cutoffExclusive) &&
           !assignedIds.contains(transaction.id);

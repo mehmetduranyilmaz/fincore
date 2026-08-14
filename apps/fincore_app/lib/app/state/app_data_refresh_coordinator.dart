@@ -132,6 +132,36 @@ final class AppDataRefreshCoordinator {
     }
   }
 
+  Future<void> allDataRestored() async {
+    _ref.invalidate(accountsControllerProvider);
+    _ref.invalidate(budgetsControllerProvider);
+    _ref.invalidate(categoriesControllerProvider);
+    _ref.invalidate(creditCardsControllerProvider);
+    _ref.invalidate(customersControllerProvider);
+    _ref.invalidate(transactionsControllerProvider);
+
+    _ref.invalidate(accountProvider);
+    _ref.invalidate(accountBalanceProvider);
+    _ref.invalidate(accountHasMovementsProvider);
+    _ref.invalidate(categoryProvider);
+    _ref.invalidate(creditCardProvider);
+    _ref.invalidate(creditCardBalanceProvider);
+    _ref.invalidate(creditCardActivitySummaryProvider);
+    _ref.invalidate(creditCardCurrentPeriodTransactionsProvider);
+    _ref.invalidate(creditCardFutureInstallmentsProvider);
+    _ref.invalidate(creditCardStatementsProvider);
+    _ref.invalidate(customerProvider);
+    _ref.invalidate(customerBalanceProvider);
+    _ref.invalidate(customerHasMovementsProvider);
+    _ref.invalidate(customerMovementsProvider);
+    _ref.invalidate(transactionDetailsProvider);
+
+    _ref.invalidate(dashboardSummaryProvider);
+    _ref.invalidate(expenseBudgetCategoriesProvider);
+    _ref.invalidate(expenseCategoryReportProvider);
+    _ref.invalidate(creditCardPaymentCalendarProvider);
+  }
+
   void creditCardStatementChanged(String creditCardId) {
     _ref.invalidate(creditCardStatementsProvider(creditCardId));
     _ref.invalidate(creditCardActivitySummaryProvider(creditCardId));
@@ -147,6 +177,7 @@ final class AppDataRefreshCoordinator {
     _ref.invalidate(creditCardActivitySummaryProvider(creditCardId));
     _ref.invalidate(creditCardCurrentPeriodTransactionsProvider(creditCardId));
     _ref.invalidate(creditCardFutureInstallmentsProvider(creditCardId));
+    _ref.invalidate(creditCardStatementPaymentStatusProvider);
   }
 
   static Set<String> _values(Iterable<String?> values) {

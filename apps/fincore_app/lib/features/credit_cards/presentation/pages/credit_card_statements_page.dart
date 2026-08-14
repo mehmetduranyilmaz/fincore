@@ -4,6 +4,7 @@ import 'package:fincore_app/core/theme/app_spacing.dart';
 import 'package:fincore_app/core/widgets/app_card.dart';
 import 'package:fincore_app/core/widgets/app_empty_state.dart';
 import 'package:fincore_app/core/widgets/app_loading_view.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
 import 'package:fincore_app/features/credit_cards/presentation/constants/credit_card_strings.dart';
 import 'package:fincore_app/features/credit_cards/presentation/providers/credit_card_balance_provider.dart';
 import 'package:fincore_app/features/credit_cards/presentation/providers/credit_card_statements_provider.dart';
@@ -84,41 +85,10 @@ final class CreditCardStatementsPage extends ConsumerWidget {
                                 const SizedBox(height: AppSpacing.md),
                             itemBuilder: (context, index) {
                               final statement = items[index];
-                              return AppCard(
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.receipt_long_outlined),
-                                    const SizedBox(width: AppSpacing.md),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${AppFormatters.date(statement.statementDate)} ekstresi',
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.titleMedium,
-                                          ),
-                                          const SizedBox(height: AppSpacing.xs),
-                                          Text(
-                                            'Son ödeme: ${AppFormatters.date(statement.dueDate)} • '
-                                            '${statement.lines.length} hareket',
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Text(
-                                      AppFormatters.currency(
-                                        statement.totalAmount,
-                                        currencyCode: creditCard.currencyCode,
-                                      ),
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.titleMedium,
-                                    ),
-                                  ],
-                                ),
+                              return _StatementPaymentCard(
+                                creditCardId: creditCardId,
+                                currencyCode: creditCard.currencyCode,
+                                statement: statement,
                               );
                             },
                           ),
@@ -128,6 +98,101 @@ final class CreditCardStatementsPage extends ConsumerWidget {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+final class _StatementPaymentCard extends ConsumerWidget {
+  const _StatementPaymentCard({
+    required this.creditCardId,
+    required this.currencyCode,
+    required this.statement,
+  });
+
+  final String creditCardId;
+  final String currencyCode;
+  final CreditCardStatement statement;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final status = ref.watch(
+      creditCardStatementPaymentStatusProvider((
+        creditCardId: creditCardId,
+        statementId: statement.id,
+      )),
+    );
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.receipt_long_outlined),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${AppFormatters.date(statement.statementDate)} ekstresi',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      'Son ödeme: ${AppFormatters.date(statement.dueDate)} • '
+                      '${statement.lines.length} hareket',
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                AppFormatters.currency(
+                  statement.totalAmount,
+                  currencyCode: currencyCode,
+                ),
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          status.when(
+            loading: () => const LinearProgressIndicator(),
+            error: (_, _) => Text(
+              'Ödeme durumu yüklenemedi.',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+            data: (value) => Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value.isPaid
+                        ? 'Ödendi'
+                        : 'Kalan: ${AppFormatters.currency(value.remainingAmount, currencyCode: currencyCode)}',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: value.isPaid
+                          ? Theme.of(context).colorScheme.primary
+                          : null,
+                    ),
+                  ),
+                ),
+                FilledButton.icon(
+                  key: Key('pay_statement_${statement.id}'),
+                  onPressed: value.isPaid
+                      ? null
+                      : () => context.push(
+                          AppRoutes.creditCardPaymentLocation(
+                            creditCardId,
+                            statementId: statement.id,
+                          ),
+                        ),
+                  icon: const Icon(Icons.payment_outlined),
+                  label: Text(value.isPaid ? 'Ödendi' : 'Öde'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

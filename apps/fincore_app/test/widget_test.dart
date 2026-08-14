@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'features/auth/dev_credential_test_store.dart';
+
 void main() {
   testWidgets('redirects unauthenticated users to login', (tester) async {
     await tester.pumpWidget(
@@ -61,6 +63,9 @@ void main() {
       ProviderScope(
         overrides: [
           authLocalDataSourceProvider.overrideWithValue(localDataSource),
+          devCredentialStoreProvider.overrideWithValue(
+            createDevCredentialStore(),
+          ),
           accountDataSourceProvider.overrideWithValue(
             const AccountMockDataSource(),
           ),
@@ -95,6 +100,9 @@ void main() {
         overrides: [
           authLocalDataSourceProvider.overrideWithValue(
             _MemoryAuthLocalDataSource(),
+          ),
+          devCredentialStoreProvider.overrideWithValue(
+            createDevCredentialStore(),
           ),
         ],
         child: const FincoreApp(),

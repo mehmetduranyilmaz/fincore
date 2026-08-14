@@ -18,6 +18,12 @@ void main() {
           initialTransactions: [
             _expense('statement', DateTime(2026, 7, 5), 100),
             _expense('current', DateTime(2026, 8, 6), 40),
+            _customerCardPayment(
+              'customer-payment',
+              DateTime(2026, 8, 6),
+              22750,
+            ),
+            _cardDebtPayment('card-payment', DateTime(2026, 8, 6), 500),
             _expense('future', DateTime(2026, 9, 6), 25, installment: true),
           ],
         ),
@@ -47,7 +53,7 @@ void main() {
       final summary = await useCase.execute(_card);
 
       expect(summary.statementAmount, 100);
-      expect(summary.currentPeriodAmount, 40);
+      expect(summary.currentPeriodAmount, 22790);
       expect(summary.futureInstallmentAmount, 25);
     },
   );
@@ -73,6 +79,42 @@ void main() {
 
     expect(summary.futureInstallmentAmount, 3000);
   });
+}
+
+Transaction _customerCardPayment(String id, DateTime date, double amount) {
+  return Transaction(
+    id: id,
+    accountId: null,
+    creditCardId: _card.id,
+    amount: amount,
+    transactionType: TransactionType.expense,
+    categoryId: null,
+    merchant: id,
+    note: null,
+    transactionDate: date,
+    source: TransactionSource.manual,
+    isDeleted: false,
+    paymentGroupId: 'customer-payment-group',
+    customerId: 'customer-1',
+    customerBalanceDelta: amount,
+  );
+}
+
+Transaction _cardDebtPayment(String id, DateTime date, double amount) {
+  return Transaction(
+    id: id,
+    accountId: null,
+    creditCardId: _card.id,
+    amount: amount,
+    transactionType: TransactionType.income,
+    categoryId: null,
+    merchant: id,
+    note: null,
+    transactionDate: date,
+    source: TransactionSource.manual,
+    isDeleted: false,
+    paymentGroupId: 'card-payment-group',
+  );
 }
 
 final class _StatementRepository implements CreditCardStatementRepository {

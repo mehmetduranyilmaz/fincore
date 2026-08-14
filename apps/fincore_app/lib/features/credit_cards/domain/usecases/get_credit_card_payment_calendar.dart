@@ -35,7 +35,6 @@ final class GetCreditCardPaymentCalendarUseCase {
       if (creditCardId == null ||
           currencyCode == null ||
           transaction.isDeleted ||
-          transaction.paymentGroupId != null ||
           transaction.transactionType != TransactionType.expense ||
           transaction.transactionDate.isBefore(firstVisibleMonth)) {
         continue;

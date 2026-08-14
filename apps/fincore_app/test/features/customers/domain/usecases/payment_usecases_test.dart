@@ -3,8 +3,11 @@ import 'package:fincore_app/features/accounts/domain/entities/account_type.dart'
 import 'package:fincore_app/features/accounts/domain/repositories/account_repository.dart';
 import 'package:fincore_app/features/accounts/domain/usecases/calculate_account_balance.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/calculate_credit_card_balance.dart';
+import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_statement_payment_status.dart';
 import 'package:fincore_app/features/customers/domain/entities/credit_card_payment_input.dart';
 import 'package:fincore_app/features/customers/domain/entities/customer.dart';
 import 'package:fincore_app/features/customers/domain/entities/customer_payment_input.dart';
@@ -54,6 +57,7 @@ void main() {
         transactions,
         const _AccountRepository(),
         const _CreditCardRepository(),
+        const _CreditCardStatementRepository(),
         accountBalance,
         cardBalance,
         clock: () => DateTime(2026, 8, 7),
@@ -83,6 +87,58 @@ void main() {
       );
     },
   );
+
+  test('statement payment tracks the remaining statement debt', () async {
+    final statement = CreditCardStatement(
+      id: 'statement-1',
+      creditCardId: _card.id,
+      statementDate: DateTime(2026, 8, 5),
+      dueDate: DateTime(2026, 8, 20),
+      lines: [
+        CreditCardStatementLine(
+          transactionId: 'card-expense',
+          description: 'Ekstre harcaması',
+          transactionDate: DateTime(2026, 8, 1),
+          amount: 300,
+        ),
+      ],
+      createdAt: DateTime(2026, 8, 5),
+    );
+    final statementRepository = _CreditCardStatementRepository([statement]);
+    final useCase = CreateCreditCardPaymentUseCase(
+      transactions,
+      const _AccountRepository(),
+      const _CreditCardRepository(),
+      statementRepository,
+      accountBalance,
+      cardBalance,
+      clock: () => DateTime(2026, 8, 7),
+      idGenerator: (index) => 'statement-payment-$index',
+      groupIdGenerator: () => 'statement-payment-group',
+    );
+
+    final created = await useCase.execute(
+      CreditCardPaymentInput(
+        creditCardId: _card.id,
+        fromAccountId: _account.id,
+        amount: 200,
+        description: '',
+        paymentDate: DateTime(2026, 8, 7),
+        statementId: statement.id,
+      ),
+    );
+
+    expect(created, everyElement(hasStatementId(statement.id)));
+    expect((await accountBalance.execute(_account.id)).currentBalance, 800);
+    expect((await cardBalance.execute(_card.id)).currentDebt, 300);
+    final status = await GetCreditCardStatementPaymentStatusUseCase(
+      statementRepository,
+      transactions,
+    ).execute(creditCardId: _card.id, statementId: statement.id);
+    expect(status.paidAmount, 200);
+    expect(status.remainingAmount, 100);
+    expect(status.isPaid, isFalse);
+  });
 
   test('allows collection even when customer is currently payable', () async {
     const customer = Customer(
@@ -402,6 +458,30 @@ final class _CreditCardRepository implements CreditCardRepository {
   @override
   Future<List<CreditCard>> getCreditCards() async => const [_card];
 }
+
+final class _CreditCardStatementRepository
+    implements CreditCardStatementRepository {
+  const _CreditCardStatementRepository([
+    this.statements = const <CreditCardStatement>[],
+  ]);
+
+  final List<CreditCardStatement> statements;
+
+  @override
+  Future<void> create(CreditCardStatement statement) async {}
+
+  @override
+  Future<List<CreditCardStatement>> getByCreditCardId(
+    String creditCardId,
+  ) async => statements
+      .where((statement) => statement.creditCardId == creditCardId)
+      .toList(growable: false);
+}
+
+Matcher hasStatementId(String statementId) => predicate<Transaction>(
+  (transaction) => transaction.creditCardStatementId == statementId,
+  'has statement id $statementId',
+);
 
 final class _CustomerRepository implements CustomerRepository {
   const _CustomerRepository(this.customer);

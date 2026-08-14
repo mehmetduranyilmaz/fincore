@@ -1,5 +1,6 @@
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
+import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 
 abstract final class TransactionStrings {
   static const String title = 'İşlemler';
@@ -76,6 +77,8 @@ abstract final class TransactionStrings {
   static const String income = 'Gelir';
   static const String expense = 'Gider';
   static const String transfer = 'Transfer';
+  static const String customerCreditCardPayment = 'K.K. ile Ödm';
+  static const String creditCardDebtPayment = 'K.K. Borç Ödm';
   static const String manual = 'Manuel';
   static const String receiptScan = 'Fiş Tarama';
   static const String imported = 'İçe Aktarma';
@@ -90,6 +93,14 @@ abstract final class TransactionStrings {
       TransactionType.expense => expense,
       TransactionType.transfer => transfer,
     };
+  }
+
+  static String transactionTypeFor(Transaction transaction) {
+    if (transaction.isCustomerCreditCardPayment) {
+      return customerCreditCardPayment;
+    }
+    if (transaction.isCreditCardPayment) return creditCardDebtPayment;
+    return transactionType(transaction.transactionType);
   }
 
   static String transactionSource(TransactionSource source) {

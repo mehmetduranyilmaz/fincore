@@ -45,6 +45,30 @@ void main() {
     expect(calendar.years.last.months.single.periodLabel, '2026-01');
     expect(calendar.years.last.totalsByCurrency, {'TRY': 10});
   });
+
+  test('includes customer payments made by credit card', () async {
+    final useCase = GetCreditCardPaymentCalendarUseCase(
+      const _CreditCardRepository(),
+      _TransactionRepository([
+        _expense(
+          'customer-payment',
+          'try-card',
+          22750,
+          DateTime(2025, 10, 10),
+          paymentGroupId: 'customer-payment-group',
+          customerId: 'customer-1',
+          customerBalanceDelta: 22750,
+        ),
+      ]),
+      clock: () => DateTime(2025, 10, 8),
+    );
+
+    final calendar = await useCase.execute();
+
+    final month = calendar.years.single.months.single;
+    expect(month.totalsByCurrency, {'TRY': 22750});
+    expect(month.transactionCount, 1);
+  });
 }
 
 Transaction _expense(
@@ -53,6 +77,9 @@ Transaction _expense(
   double amount,
   DateTime date, {
   bool isDeleted = false,
+  String? paymentGroupId,
+  String? customerId,
+  double? customerBalanceDelta,
 }) {
   return Transaction(
     id: id,
@@ -66,6 +93,9 @@ Transaction _expense(
     transactionDate: date,
     source: TransactionSource.manual,
     isDeleted: isDeleted,
+    paymentGroupId: paymentGroupId,
+    customerId: customerId,
+    customerBalanceDelta: customerBalanceDelta,
   );
 }
 

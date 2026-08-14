@@ -9,6 +9,7 @@ import 'package:fincore_app/features/auth/data/datasources/auth_local_data_sourc
 import 'package:fincore_app/features/auth/data/datasources/auth_remote_data_source.dart';
 import 'package:fincore_app/features/auth/data/datasources/auth_remote_data_source_impl.dart';
 import 'package:fincore_app/features/auth/data/datasources/dev_auth_remote_data_source.dart';
+import 'package:fincore_app/features/auth/data/datasources/dev_credential_store.dart';
 import 'package:fincore_app/features/budgets/data/datasources/budget_mock_data_source.dart';
 import 'package:fincore_app/features/budgets/data/datasources/budget_local_data_source.dart';
 import 'package:fincore_app/features/categories/data/datasources/category_mock_data_source.dart';
@@ -31,12 +32,20 @@ final authLocalDataSourceProvider = Provider<AuthLocalDataSource>(
 final Provider<AuthRemoteDataSource> authRemoteDataSourceProvider =
     Provider<AuthRemoteDataSource>(
       (ref) => switch (ref.watch(environmentProvider)) {
-        Environment.dev => const DevAuthRemoteDataSource(),
+        Environment.dev => DevAuthRemoteDataSource(
+          ref.watch(devCredentialStoreProvider),
+        ),
         Environment.test || Environment.prod => AuthRemoteDataSourceImpl(
           apiClient: ref.watch(apiClientProvider),
         ),
       },
     );
+
+final devCredentialStoreProvider = Provider<DevCredentialStore>(
+  (ref) => DevCredentialStore(
+    SecureCredentialKeyValueStore(ref.watch(secureStorageServiceProvider)),
+  ),
+);
 
 final accountLocalDataSourceProvider = Provider<AccountLocalDataSource>(
   (ref) => AccountLocalDataSource(ref.watch(secureStorageServiceProvider)),

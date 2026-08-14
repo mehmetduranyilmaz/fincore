@@ -66,8 +66,10 @@ final class CalculateDashboardSummaryUseCase {
       switch (transaction.transactionType) {
         case TransactionType.income when transaction.accountId != null:
           monthlyIncome += transaction.amount.abs();
-        case TransactionType.expense:
+        case TransactionType.expense when transaction.isActualExpense:
           monthlyExpense += transaction.amount.abs();
+        case TransactionType.expense:
+          continue;
         case TransactionType.income:
         case TransactionType.transfer:
           continue;

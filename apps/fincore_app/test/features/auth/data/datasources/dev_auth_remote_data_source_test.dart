@@ -1,9 +1,14 @@
 import 'package:fincore_app/core/network/exceptions/api_exception.dart';
 import 'package:fincore_app/features/auth/data/datasources/dev_auth_remote_data_source.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../dev_credential_test_store.dart';
 
 void main() {
-  const dataSource = DevAuthRemoteDataSource();
+  late DevAuthRemoteDataSource dataSource;
+
+  setUp(() {
+    dataSource = createDevAuthRemoteDataSource();
+  });
 
   test('returns the deterministic development session', () async {
     final response = await dataSource.login(

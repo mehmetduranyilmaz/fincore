@@ -54,9 +54,7 @@ final class _TransactionDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final type = TransactionStrings.transactionType(
-      transaction.transactionType,
-    );
+    final type = TransactionStrings.transactionTypeFor(transaction);
     final source = TransactionStrings.transactionSource(transaction.source);
 
     return Column(
@@ -88,7 +86,7 @@ final class _TransactionAmount extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isIncome = transaction.transactionType == TransactionType.income;
-    final isExpense = transaction.transactionType == TransactionType.expense;
+    final isExpense = transaction.isActualExpense;
     final successColor = Theme.of(context).brightness == Brightness.dark
         ? AppColors.successDark
         : AppColors.success;

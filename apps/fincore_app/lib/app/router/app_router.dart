@@ -4,6 +4,7 @@ import 'package:fincore_app/app/state/app_state.dart';
 import 'package:fincore_app/features/accounts/presentation/pages/account_form_pages.dart';
 import 'package:fincore_app/features/app_shell/presentation/pages/app_shell_page.dart';
 import 'package:fincore_app/features/auth/presentation/pages/login_page.dart';
+import 'package:fincore_app/features/auth/presentation/pages/profile_page.dart';
 import 'package:fincore_app/features/budgets/presentation/pages/create_budget_page.dart';
 import 'package:fincore_app/features/budgets/presentation/pages/edit_budget_page.dart';
 import 'package:fincore_app/features/categories/presentation/pages/create_category_page.dart';
@@ -57,6 +58,10 @@ abstract final class AppRouter {
         GoRoute(
           path: AppRoutes.login,
           builder: (context, state) => const LoginPage(),
+        ),
+        GoRoute(
+          path: AppRoutes.profile,
+          builder: (context, state) => const ProfilePage(),
         ),
         GoRoute(
           path: AppRoutes.dashboard,
@@ -128,6 +133,7 @@ abstract final class AppRouter {
           path: AppRoutes.creditCardPayment,
           builder: (context, state) => CreditCardPaymentPage(
             creditCardId: state.pathParameters['creditCardId']!,
+            statementId: state.uri.queryParameters['statementId'],
           ),
         ),
         GoRoute(

@@ -118,7 +118,7 @@ final class CalculateExpenseCategoryReportUseCase {
     ExpenseReportPeriod period,
   ) {
     return !transaction.isDeleted &&
-        transaction.transactionType == TransactionType.expense &&
+        transaction.isActualExpense &&
         !transaction.transactionDate.isBefore(period.startDate) &&
         !transaction.transactionDate.isAfter(period.endDate);
   }

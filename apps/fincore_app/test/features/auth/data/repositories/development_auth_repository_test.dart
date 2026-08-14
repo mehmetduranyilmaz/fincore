@@ -3,6 +3,7 @@ import 'package:fincore_app/features/auth/data/datasources/dev_auth_remote_data_
 import 'package:fincore_app/features/auth/data/repositories/auth_repository_impl.dart';
 import 'package:fincore_app/features/auth/domain/entities/auth_session.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../../dev_credential_test_store.dart';
 
 void main() {
   test(
@@ -11,7 +12,7 @@ void main() {
       final localDataSource = _MemoryAuthLocalDataSource();
       final repository = AuthRepositoryImpl(
         localDataSource: localDataSource,
-        remoteDataSource: const DevAuthRemoteDataSource(),
+        remoteDataSource: createDevAuthRemoteDataSource(),
       );
 
       final session = await repository.login(
@@ -29,7 +30,7 @@ void main() {
     final localDataSource = _MemoryAuthLocalDataSource();
     final repository = AuthRepositoryImpl(
       localDataSource: localDataSource,
-      remoteDataSource: const DevAuthRemoteDataSource(),
+      remoteDataSource: createDevAuthRemoteDataSource(),
     );
 
     await repository.login(

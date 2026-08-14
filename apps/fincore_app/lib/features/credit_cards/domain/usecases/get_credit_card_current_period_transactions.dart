@@ -34,7 +34,7 @@ final class GetCreditCardCurrentPeriodTransactionsUseCase {
     final result = transactions.where((transaction) {
       return transaction.creditCardId == creditCardId &&
           !transaction.isDeleted &&
-          transaction.paymentGroupId == null &&
+          !transaction.isCreditCardDebtPayment &&
           transaction.transactionType != TransactionType.transfer &&
           !transaction.transactionDate.isAfter(now) &&
           !assignedIds.contains(transaction.id);

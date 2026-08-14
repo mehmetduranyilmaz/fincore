@@ -22,6 +22,7 @@ final class CalculateBudgetProgressUseCase {
       final date = transaction.transactionDate;
       if (!transaction.isDeleted &&
           transaction.transactionType == TransactionType.expense &&
+          transaction.isActualExpense &&
           transaction.categoryId == budget.categoryId &&
           date.month == budget.month &&
           date.year == budget.year) {

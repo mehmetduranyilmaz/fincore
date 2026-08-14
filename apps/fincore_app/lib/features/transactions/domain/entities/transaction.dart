@@ -20,6 +20,7 @@ final class Transaction {
     int? installmentCount,
     double? installmentTotalAmount,
     String? paymentGroupId,
+    String? creditCardStatementId,
     String? customerId,
     double? customerBalanceDelta,
   }) {
@@ -53,6 +54,7 @@ final class Transaction {
       installmentCount: installmentCount,
       installmentTotalAmount: installmentTotalAmount,
       paymentGroupId: paymentGroupId,
+      creditCardStatementId: creditCardStatementId,
       customerId: customerId,
       customerBalanceDelta: customerBalanceDelta,
     );
@@ -76,6 +78,7 @@ final class Transaction {
     required this.installmentCount,
     required this.installmentTotalAmount,
     required this.paymentGroupId,
+    required this.creditCardStatementId,
     required this.customerId,
     required this.customerBalanceDelta,
   });
@@ -97,6 +100,7 @@ final class Transaction {
   final int? installmentCount;
   final double? installmentTotalAmount;
   final String? paymentGroupId;
+  final String? creditCardStatementId;
   final String? customerId;
   final double? customerBalanceDelta;
 
@@ -107,6 +111,36 @@ final class Transaction {
         customerBalanceDelta != null &&
         paymentGroupId != null &&
         source == TransactionSource.manual;
+  }
+
+  bool get isCreditCardDebtPayment {
+    return creditCardId != null &&
+        transactionType == TransactionType.income &&
+        paymentGroupId != null &&
+        customerId == null &&
+        customerBalanceDelta == null;
+  }
+
+  bool get isCreditCardDebtPaymentTransfer {
+    return accountId != null &&
+        transactionType == TransactionType.transfer &&
+        paymentGroupId != null &&
+        customerId == null &&
+        customerBalanceDelta == null;
+  }
+
+  bool get isCreditCardPayment {
+    return isCreditCardDebtPayment || isCreditCardDebtPaymentTransfer;
+  }
+
+  bool get isCustomerCreditCardPayment {
+    return isCustomerPayment &&
+        creditCardId != null &&
+        customerBalanceDelta! > 0;
+  }
+
+  bool get isActualExpense {
+    return transactionType == TransactionType.expense && !isCustomerPayment;
   }
 
   bool get canConvertToInstallments {
@@ -208,6 +242,7 @@ final class Transaction {
             installmentCount == other.installmentCount &&
             installmentTotalAmount == other.installmentTotalAmount &&
             paymentGroupId == other.paymentGroupId &&
+            creditCardStatementId == other.creditCardStatementId &&
             customerId == other.customerId &&
             customerBalanceDelta == other.customerBalanceDelta;
   }
@@ -232,6 +267,7 @@ final class Transaction {
       installmentCount,
       installmentTotalAmount,
       paymentGroupId,
+      creditCardStatementId,
       customerId,
       customerBalanceDelta,
     );

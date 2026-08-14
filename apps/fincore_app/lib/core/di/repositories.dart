@@ -5,7 +5,9 @@ import 'package:fincore_app/features/accounts/domain/repositories/account_comman
 import 'package:fincore_app/features/accounts/domain/repositories/account_repository.dart';
 import 'package:fincore_app/features/accounts/domain/repositories/account_usage_repository.dart';
 import 'package:fincore_app/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:fincore_app/features/auth/data/repositories/dev_user_credentials_repository.dart';
 import 'package:fincore_app/features/auth/domain/repositories/auth_repository.dart';
+import 'package:fincore_app/features/auth/domain/repositories/user_credentials_repository.dart';
 import 'package:fincore_app/features/budgets/data/repositories/budget_repository_impl.dart';
 import 'package:fincore_app/features/budgets/domain/repositories/budget_repository.dart';
 import 'package:fincore_app/features/categories/data/repositories/category_repository_impl.dart';
@@ -36,6 +38,12 @@ final Provider<AuthRepository> authRepositoryProvider =
         localDataSource: ref.watch(authLocalDataSourceProvider),
         remoteDataSource: ref.watch(authRemoteDataSourceProvider),
       ),
+    );
+
+final Provider<UserCredentialsRepository> userCredentialsRepositoryProvider =
+    Provider<UserCredentialsRepository>(
+      (ref) =>
+          DevUserCredentialsRepository(ref.watch(devCredentialStoreProvider)),
     );
 
 final Provider<AccountRepository> accountRepositoryProvider =

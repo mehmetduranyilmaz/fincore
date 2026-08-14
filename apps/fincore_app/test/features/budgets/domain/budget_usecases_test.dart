@@ -130,6 +130,14 @@ void main() {
       TransactionMockDataSource(
         initialTransactions: [
           _transaction('counted', 5250, TransactionType.expense),
+          _transaction(
+            'customer-card-payment',
+            750,
+            TransactionType.expense,
+            customerId: 'customer-1',
+            customerBalanceDelta: 750,
+            paymentGroupId: 'customer-payment-group',
+          ),
           _transaction('income', 1000, TransactionType.income),
           _transaction('transfer', -500, TransactionType.transfer),
           _transaction(
@@ -203,6 +211,9 @@ Transaction _transaction(
   String categoryId = 'expense',
   DateTime? date,
   bool isDeleted = false,
+  String? customerId,
+  double? customerBalanceDelta,
+  String? paymentGroupId,
 }) {
   return Transaction(
     id: id,
@@ -217,5 +228,8 @@ Transaction _transaction(
     source: TransactionSource.manual,
     isDeleted: isDeleted,
     transferGroupId: type == TransactionType.transfer ? 'transfer' : null,
+    customerId: customerId,
+    customerBalanceDelta: customerBalanceDelta,
+    paymentGroupId: paymentGroupId,
   );
 }
