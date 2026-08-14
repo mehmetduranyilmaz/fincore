@@ -55,4 +55,29 @@ void main() {
     expect(restored.creditCardStatementId, isNull);
     expect(restored.customerId, isNull);
   });
+
+  test('round-trips an open-account expense without a financial source', () {
+    final transaction = Transaction(
+      id: 'open-account-expense',
+      accountId: null,
+      creditCardId: null,
+      amount: 750,
+      transactionType: TransactionType.expense,
+      categoryId: 'training',
+      merchant: 'Eğitim',
+      note: null,
+      transactionDate: DateTime(2026, 8, 7),
+      source: TransactionSource.manual,
+      isDeleted: false,
+      customerId: 'customer-1',
+      customerBalanceDelta: -750,
+    );
+
+    final restored = TransactionDto.fromJson(
+      TransactionDto(transaction).toJson(),
+    ).transaction;
+
+    expect(restored, transaction);
+    expect(restored.isCustomerCreditExpense, isTrue);
+  });
 }

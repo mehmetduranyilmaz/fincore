@@ -52,7 +52,8 @@ void main() {
 
     final expense = _transaction(
       id: 'expense',
-      accountId: 'account-1',
+      customerId: 'customer-1',
+      customerBalanceDelta: -10,
       amount: 10,
       type: TransactionType.expense,
     );
@@ -62,9 +63,9 @@ void main() {
         .transactionsChanged(current: [expense]);
     final refreshed = await container.read(dashboardSummaryProvider.future);
 
-    expect(refreshed.totalAccountBalances, 90);
+    expect(refreshed.totalAccountBalances, 100);
     expect(refreshed.monthlyExpense, 30);
-    expect(refreshed.netWorth, 70);
+    expect(refreshed.netWorth, 80);
   });
 }
 
@@ -72,6 +73,8 @@ Transaction _transaction({
   required String id,
   String? accountId,
   String? creditCardId,
+  String? customerId,
+  double? customerBalanceDelta,
   required double amount,
   required TransactionType type,
 }) {
@@ -79,6 +82,8 @@ Transaction _transaction({
     id: id,
     accountId: accountId,
     creditCardId: creditCardId,
+    customerId: customerId,
+    customerBalanceDelta: customerBalanceDelta,
     amount: amount,
     transactionType: type,
     categoryId: null,

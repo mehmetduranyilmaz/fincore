@@ -8,6 +8,7 @@ import 'package:fincore_app/core/widgets/app_card.dart';
 import 'package:fincore_app/core/widgets/app_text_field.dart';
 import 'package:fincore_app/features/accounts/presentation/controllers/accounts_controller.dart';
 import 'package:fincore_app/features/credit_cards/presentation/controllers/credit_cards_controller.dart';
+import 'package:fincore_app/features/customers/presentation/controllers/customers_controller.dart';
 import 'package:fincore_app/features/categories/domain/entities/category_type.dart';
 import 'package:fincore_app/features/categories/presentation/controllers/categories_controller.dart';
 import 'package:fincore_app/features/categories/presentation/widgets/category_selector.dart';
@@ -21,6 +22,8 @@ import 'package:fincore_app/features/transactions/presentation/widgets/installme
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+enum _ExpensePaymentStatus { cash, openAccount }
 
 final class CreateManualExpensePage extends ConsumerStatefulWidget {
   const CreateManualExpensePage({super.key});
@@ -39,6 +42,7 @@ final class _CreateManualExpensePageState
   late DateTime _transactionDate;
   ExpenseSourceSelection? _source;
   String? _categoryId;
+  _ExpensePaymentStatus _paymentStatus = _ExpensePaymentStatus.cash;
   double _totalAmount = 0;
   List<double> _installmentAmounts = const [];
   String? _installmentError;
@@ -68,6 +72,7 @@ final class _CreateManualExpensePageState
     final createState = ref.watch(createExpenseControllerProvider);
     final accountsState = ref.watch(accountsControllerProvider);
     final creditCardsState = ref.watch(creditCardsControllerProvider);
+    final customersState = ref.watch(customersControllerProvider);
     final categories = ref.watch(
       categoriesControllerProvider.select((state) => state.categories),
     );
@@ -133,28 +138,71 @@ final class _CreateManualExpensePageState
                         onTap: _selectDate,
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      ExpenseSourceSelector(
-                        accounts: accountsState.accounts,
-                        creditCards: creditCardsState.creditCards,
-                        value: _source,
-                        onChanged: (selection) {
+                      Text(
+                        TransactionStrings.paymentStatus,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      SegmentedButton<_ExpensePaymentStatus>(
+                        key: const Key('expense_payment_status'),
+                        segments: const [
+                          ButtonSegment(
+                            value: _ExpensePaymentStatus.cash,
+                            label: Text(TransactionStrings.cashPayment),
+                            icon: Icon(Icons.payments_outlined),
+                          ),
+                          ButtonSegment(
+                            value: _ExpensePaymentStatus.openAccount,
+                            label: Text(TransactionStrings.openAccount),
+                            icon: Icon(Icons.person_outline),
+                          ),
+                        ],
+                        selected: {_paymentStatus},
+                        onSelectionChanged: (selection) {
                           setState(() {
-                            _source = selection;
+                            _paymentStatus = selection.single;
+                            _source = null;
+                            _installmentAmounts = const [];
                             _installmentError = null;
                           });
                         },
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      InstallmentPlanEditor(
-                        totalAmount: _totalAmount,
-                        initialCount: 1,
-                        onChanged: (amounts) {
-                          _installmentAmounts = amounts;
-                          if (_installmentError != null && mounted) {
-                            setState(() => _installmentError = null);
-                          }
-                        },
-                      ),
+                      if (_paymentStatus == _ExpensePaymentStatus.cash) ...[
+                        ExpenseSourceSelector(
+                          accounts: accountsState.accounts,
+                          creditCards: creditCardsState.creditCards,
+                          value: _source,
+                          onChanged: (selection) {
+                            setState(() {
+                              _source = selection;
+                              _installmentError = null;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        InstallmentPlanEditor(
+                          totalAmount: _totalAmount,
+                          initialCount: 1,
+                          onChanged: (amounts) {
+                            _installmentAmounts = amounts;
+                            if (_installmentError != null && mounted) {
+                              setState(() => _installmentError = null);
+                            }
+                          },
+                        ),
+                      ] else
+                        ExpenseSourceSelector(
+                          key: const Key('open_account_customer_selector'),
+                          accounts: const [],
+                          creditCards: const [],
+                          customers: customersState.customers,
+                          value: _source,
+                          label: TransactionStrings.openAccountCustomer,
+                          hint: TransactionStrings.selectOpenAccountCustomer,
+                          onChanged: (selection) =>
+                              setState(() => _source = selection),
+                        ),
                       if (_installmentError case final message?) ...[
                         const SizedBox(height: AppSpacing.sm),
                         Text(
@@ -218,6 +266,12 @@ final class _CreateManualExpensePageState
         categoriesStatus == CategoriesStatus.failure) {
       unawaited(ref.read(categoriesControllerProvider.notifier).load());
     }
+
+    final customersStatus = ref.read(customersControllerProvider).status;
+    if (customersStatus == CustomersStatus.initial ||
+        customersStatus == CustomersStatus.failure) {
+      unawaited(ref.read(customersControllerProvider.notifier).load());
+    }
   }
 
   Future<void> _selectDate() async {
@@ -242,7 +296,9 @@ final class _CreateManualExpensePageState
     final amount = _parseAmount(_amountController.text)!;
     final description = _descriptionController.text.trim();
     final source = _source!;
-    final installmentAmounts = _installmentAmounts.length <= 1
+    final installmentAmounts =
+        _paymentStatus == _ExpensePaymentStatus.openAccount ||
+            _installmentAmounts.length <= 1
         ? [amount]
         : _installmentAmounts;
 
@@ -269,6 +325,7 @@ final class _CreateManualExpensePageState
           CreateManualExpenseInput(
             accountId: source.accountId,
             creditCardId: source.creditCardId,
+            customerId: source.customerId,
             amount: amount,
             description: description,
             categoryId: _categoryId,

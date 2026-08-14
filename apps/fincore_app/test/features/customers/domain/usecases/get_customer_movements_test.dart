@@ -18,6 +18,11 @@ void main() {
           date: DateTime(2026, 8, 1),
           balanceDelta: -150,
         ),
+        _openAccountExpense(
+          id: 'training-expense',
+          date: DateTime(2026, 7, 31),
+          amount: 50,
+        ),
       ]),
       const _CustomerRepository(),
     );
@@ -27,12 +32,56 @@ void main() {
     expect(result.map((item) => item.transaction.id), [
       'payment',
       'collection',
+      'training-expense',
     ]);
-    expect(result.first.balanceAfterMovement, 20);
-    expect(result.first.balanceSide, CustomerBalanceSide.debtor);
-    expect(result.last.balanceAfterMovement, -50);
-    expect(result.last.balanceSide, CustomerBalanceSide.creditor);
+    expect(result.first.balanceAfterMovement, -30);
+    expect(result.first.balanceSide, CustomerBalanceSide.creditor);
+    expect(result[1].balanceAfterMovement, -100);
+    expect(result.last.balanceAfterMovement, 50);
+    expect(result.last.balanceSide, CustomerBalanceSide.debtor);
+    expect(result.last.transaction.isCustomerCreditExpense, isTrue);
   });
+
+  test('does not include deleted open-account expenses', () async {
+    final useCase = GetCustomerMovementsUseCase(
+      _TransactionRepository([
+        _openAccountExpense(
+          id: 'deleted-expense',
+          date: DateTime(2026, 8, 1),
+          amount: 50,
+          isDeleted: true,
+        ),
+      ]),
+      const _CustomerRepository(),
+    );
+
+    final result = await useCase.execute('customer-1');
+
+    expect(result, isEmpty);
+  });
+}
+
+Transaction _openAccountExpense({
+  required String id,
+  required DateTime date,
+  required double amount,
+  bool isDeleted = false,
+}) {
+  return Transaction(
+    id: id,
+    accountId: null,
+    creditCardId: null,
+    amount: amount,
+    transactionType: TransactionType.expense,
+    categoryId: 'training',
+    merchant: 'Eğitim',
+    note: null,
+    transactionDate: date,
+    source: TransactionSource.manual,
+    isDeleted: isDeleted,
+    customerId: 'customer-1',
+    customerBalanceDelta: -amount,
+  );
 }
 
 Transaction _movement({

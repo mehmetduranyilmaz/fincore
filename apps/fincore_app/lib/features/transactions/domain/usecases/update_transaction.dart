@@ -1,3 +1,4 @@
+import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/entities/update_transaction_input.dart';
@@ -11,11 +12,13 @@ final class UpdateTransactionUseCase {
   UpdateTransactionUseCase(
     this._repository, {
     this.categoryValidator,
+    this.customerRepository,
     UpdateTransactionClock? clock,
   }) : _clock = clock ?? DateTime.now;
 
   final TransactionRepository _repository;
   final TransactionCategoryValidator? categoryValidator;
+  final CustomerRepository? customerRepository;
   final UpdateTransactionClock _clock;
 
   Future<Transaction> execute(UpdateTransactionInput input) async {
@@ -29,6 +32,11 @@ final class UpdateTransactionUseCase {
 
     _validate(input, current.transactionType);
     await _validateCategory(input.categoryId, current.transactionType);
+    await _validateCustomer(input.customerId);
+
+    final isCustomerCreditExpense =
+        current.transactionType == TransactionType.expense &&
+        input.customerId != null;
 
     final updated = Transaction(
       id: current.id,
@@ -47,6 +55,10 @@ final class UpdateTransactionUseCase {
       installmentNumber: current.installmentNumber,
       installmentCount: current.installmentCount,
       installmentTotalAmount: current.installmentTotalAmount,
+      paymentGroupId: current.paymentGroupId,
+      creditCardStatementId: current.creditCardStatementId,
+      customerId: input.customerId,
+      customerBalanceDelta: isCustomerCreditExpense ? -input.amount : null,
     );
 
     await _repository.update(updated);
@@ -67,17 +79,36 @@ final class UpdateTransactionUseCase {
     );
   }
 
+  Future<void> _validateCustomer(String? customerId) async {
+    if (customerId == null) return;
+    final repository = customerRepository;
+    if (repository == null) {
+      throw StateError('Customer repository is required.');
+    }
+    final customer = await repository.getById(customerId);
+    if (customer == null || customer.isArchived) {
+      throw ArgumentError.value(customerId, 'customerId');
+    }
+  }
+
   void _validate(UpdateTransactionInput input, TransactionType type) {
     ManualTransactionValidator.validateAmount(input.amount);
     ManualTransactionValidator.validateDescription(input.description);
     ManualTransactionValidator.validateDate(input.transactionDate, _clock());
-    Transaction.validateSource(
-      accountId: input.accountId,
-      creditCardId: input.creditCardId,
-    );
+    final sourceCount = [
+      input.accountId,
+      input.creditCardId,
+      input.customerId,
+    ].nonNulls.length;
+    if (sourceCount != 1) {
+      throw ArgumentError(
+        'Exactly one account, credit card, or open-account customer is required.',
+      );
+    }
 
-    if (type == TransactionType.income && input.creditCardId != null) {
-      throw ArgumentError.value(input.creditCardId, 'creditCardId');
+    if (type == TransactionType.income &&
+        (input.creditCardId != null || input.customerId != null)) {
+      throw ArgumentError('Income must use an account.');
     }
   }
 }

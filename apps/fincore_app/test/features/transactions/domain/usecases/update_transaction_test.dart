@@ -1,3 +1,5 @@
+import 'package:fincore_app/features/customers/domain/entities/customer.dart';
+import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
@@ -14,6 +16,7 @@ void main() {
     repository = _TransactionRepository([_manualExpense()]);
     useCase = UpdateTransactionUseCase(
       repository,
+      customerRepository: const _CustomerRepository(),
       clock: () => DateTime(2026, 7, 25, 12),
     );
   });
@@ -73,12 +76,25 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('converts a cash expense to an open-account expense', () async {
+    final updated = await useCase.execute(
+      _input(accountId: null, customerId: 'customer-1', amount: 900),
+    );
+
+    expect(updated.accountId, isNull);
+    expect(updated.creditCardId, isNull);
+    expect(updated.customerId, 'customer-1');
+    expect(updated.customerBalanceDelta, -900);
+    expect(updated.isCustomerCreditExpense, isTrue);
+  });
 }
 
 UpdateTransactionInput _input({
   String transactionId = 'manual-expense',
   String? accountId = 'account-1',
   String? creditCardId,
+  String? customerId,
   double amount = 450,
   String description = '  Updated expense  ',
   DateTime? transactionDate,
@@ -87,11 +103,40 @@ UpdateTransactionInput _input({
     transactionId: transactionId,
     accountId: accountId,
     creditCardId: creditCardId,
+    customerId: customerId,
     amount: amount,
     description: description,
     categoryId: 'category-updated',
     transactionDate: transactionDate ?? DateTime(2026, 7, 25),
   );
+}
+
+final class _CustomerRepository implements CustomerRepository {
+  const _CustomerRepository();
+
+  static const customer = Customer(
+    id: 'customer-1',
+    name: 'Eğitim Kurumu',
+    openingBalance: 0,
+    currencyCode: 'TRY',
+    isArchived: false,
+  );
+
+  @override
+  Future<void> archive(String customerId) async {}
+
+  @override
+  Future<void> create(Customer customer) async {}
+
+  @override
+  Future<Customer?> getById(String customerId) async =>
+      customerId == customer.id ? customer : null;
+
+  @override
+  Future<List<Customer>> getCustomers() async => const [customer];
+
+  @override
+  Future<void> update(Customer customer) async {}
 }
 
 Transaction _manualExpense() {

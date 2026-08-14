@@ -1,3 +1,5 @@
+import 'package:fincore_app/features/customers/domain/entities/customer.dart';
+import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:fincore_app/features/transactions/domain/entities/create_manual_expense_input.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
@@ -16,6 +18,7 @@ void main() {
     useCase = CreateManualExpenseUseCase(
       repository,
       installmentRepository: repository,
+      customerRepository: const _CustomerRepository(),
       clock: () => DateTime(2026, 7, 25, 12),
       idGenerator: () => 'manual-expense-1',
     );
@@ -55,6 +58,47 @@ void main() {
       ),
       throwsArgumentError,
     );
+  });
+
+  test('creates an open-account expense and increases our payable', () async {
+    final transaction = await useCase.execute(
+      CreateManualExpenseInput(
+        accountId: null,
+        creditCardId: null,
+        customerId: 'customer-1',
+        amount: 750,
+        description: 'Eğitim gideri',
+        categoryId: 'category-training',
+        transactionDate: DateTime(2026, 7, 25),
+      ),
+    );
+
+    expect(transaction.accountId, isNull);
+    expect(transaction.creditCardId, isNull);
+    expect(transaction.customerId, 'customer-1');
+    expect(transaction.customerBalanceDelta, -750);
+    expect(transaction.isCustomerCreditExpense, isTrue);
+    expect(transaction.isActualExpense, isTrue);
+    expect(repository.transactions, [transaction]);
+  });
+
+  test('rejects an unknown or archived open-account customer', () {
+    for (final customerId in ['missing-customer', 'archived-customer']) {
+      expect(
+        () => useCase.execute(
+          CreateManualExpenseInput(
+            accountId: null,
+            creditCardId: null,
+            customerId: customerId,
+            amount: 100,
+            description: 'Eğitim gideri',
+            categoryId: null,
+            transactionDate: DateTime(2026, 7, 25),
+          ),
+        ),
+        throwsArgumentError,
+      );
+    }
   });
 
   test('rejects invalid source combinations', () {
@@ -157,6 +201,47 @@ void main() {
       throwsArgumentError,
     );
   });
+}
+
+final class _CustomerRepository implements CustomerRepository {
+  const _CustomerRepository();
+
+  static const customers = [
+    Customer(
+      id: 'customer-1',
+      name: 'Eğitim Kurumu',
+      openingBalance: 0,
+      currencyCode: 'TRY',
+      isArchived: false,
+    ),
+    Customer(
+      id: 'archived-customer',
+      name: 'Arşivli Müşteri',
+      openingBalance: 0,
+      currencyCode: 'TRY',
+      isArchived: true,
+    ),
+  ];
+
+  @override
+  Future<void> archive(String customerId) async {}
+
+  @override
+  Future<void> create(Customer customer) async {}
+
+  @override
+  Future<Customer?> getById(String customerId) async {
+    for (final customer in customers) {
+      if (customer.id == customerId) return customer;
+    }
+    return null;
+  }
+
+  @override
+  Future<List<Customer>> getCustomers() async => customers;
+
+  @override
+  Future<void> update(Customer customer) async {}
 }
 
 final class _TransactionRepository

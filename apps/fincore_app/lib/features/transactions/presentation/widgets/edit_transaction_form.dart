@@ -13,6 +13,8 @@ import 'package:fincore_app/features/categories/presentation/controllers/categor
 import 'package:fincore_app/features/categories/presentation/widgets/category_selector.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/presentation/controllers/credit_cards_controller.dart';
+import 'package:fincore_app/features/customers/domain/entities/customer.dart';
+import 'package:fincore_app/features/customers/presentation/controllers/customers_controller.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/entities/update_transaction_input.dart';
@@ -24,6 +26,8 @@ import 'package:fincore_app/features/transactions/presentation/widgets/transacti
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
+enum _ExpensePaymentStatus { cash, openAccount }
 
 final class EditTransactionForm extends ConsumerStatefulWidget {
   const EditTransactionForm({required this.transaction, super.key});
@@ -43,7 +47,9 @@ final class _EditTransactionFormState
   late DateTime _transactionDate;
   late String? _accountId;
   late String? _creditCardId;
+  late String? _customerId;
   late String? _categoryId;
+  late _ExpensePaymentStatus _paymentStatus;
 
   @override
   void initState() {
@@ -56,6 +62,10 @@ final class _EditTransactionFormState
     _transactionDate = transaction.transactionDate;
     _accountId = transaction.accountId;
     _creditCardId = transaction.creditCardId;
+    _customerId = transaction.customerId;
+    _paymentStatus = transaction.isCustomerCreditExpense
+        ? _ExpensePaymentStatus.openAccount
+        : _ExpensePaymentStatus.cash;
     _categoryId = transaction.categoryId;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -80,6 +90,9 @@ final class _EditTransactionFormState
     );
     final creditCards = ref.watch(
       creditCardsControllerProvider.select((state) => state.creditCards),
+    );
+    final customers = ref.watch(
+      customersControllerProvider.select((state) => state.customers),
     );
     final categories = ref.watch(
       categoriesControllerProvider.select((state) => state.categories),
@@ -107,7 +120,7 @@ final class _EditTransactionFormState
                 children: [
                   _ImmutableTransactionFields(transaction: widget.transaction),
                   const SizedBox(height: AppSpacing.md),
-                  _buildPaymentSource(accounts, creditCards),
+                  _buildPaymentSource(accounts, creditCards, customers),
                   const SizedBox(height: AppSpacing.md),
                   AppTextField(
                     controller: _amountController,
@@ -179,6 +192,7 @@ final class _EditTransactionFormState
   Widget _buildPaymentSource(
     List<Account> accounts,
     List<CreditCard> creditCards,
+    List<Customer> customers,
   ) {
     if (widget.transaction.transactionType == TransactionType.income) {
       return TransactionAccountSelector(
@@ -190,31 +204,83 @@ final class _EditTransactionFormState
           setState(() {
             _accountId = accountId;
             _creditCardId = null;
+            _customerId = null;
           });
         },
       );
     }
 
-    return ExpenseSourceSelector(
-      key: ValueKey(
-        '${_accountId ?? _creditCardId ?? ''}-'
-        '${accounts.length}-${creditCards.length}',
-      ),
-      accounts: accounts,
-      creditCards: creditCards,
-      value: _expenseSelection(accounts, creditCards),
-      onChanged: (selection) {
-        setState(() {
-          _accountId = selection?.accountId;
-          _creditCardId = selection?.creditCardId;
-        });
-      },
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          TransactionStrings.paymentStatus,
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        SegmentedButton<_ExpensePaymentStatus>(
+          key: const Key('edit_expense_payment_status'),
+          segments: const [
+            ButtonSegment(
+              value: _ExpensePaymentStatus.cash,
+              label: Text(TransactionStrings.cashPayment),
+              icon: Icon(Icons.payments_outlined),
+            ),
+            ButtonSegment(
+              value: _ExpensePaymentStatus.openAccount,
+              label: Text(TransactionStrings.openAccount),
+              icon: Icon(Icons.person_outline),
+            ),
+          ],
+          selected: {_paymentStatus},
+          onSelectionChanged: (selection) {
+            setState(() {
+              _paymentStatus = selection.single;
+              _accountId = null;
+              _creditCardId = null;
+              _customerId = null;
+            });
+          },
+        ),
+        const SizedBox(height: AppSpacing.md),
+        ExpenseSourceSelector(
+          key: ValueKey(
+            '${_paymentStatus.name}-'
+            '${_accountId ?? _creditCardId ?? _customerId ?? ''}-'
+            '${accounts.length}-${creditCards.length}-${customers.length}',
+          ),
+          accounts: _paymentStatus == _ExpensePaymentStatus.cash
+              ? accounts
+              : const [],
+          creditCards: _paymentStatus == _ExpensePaymentStatus.cash
+              ? creditCards
+              : const [],
+          customers: _paymentStatus == _ExpensePaymentStatus.openAccount
+              ? customers
+              : const [],
+          value: _expenseSelection(accounts, creditCards, customers),
+          label: _paymentStatus == _ExpensePaymentStatus.openAccount
+              ? TransactionStrings.openAccountCustomer
+              : TransactionStrings.paymentSource,
+          hint: _paymentStatus == _ExpensePaymentStatus.openAccount
+              ? TransactionStrings.selectOpenAccountCustomer
+              : TransactionStrings.selectPaymentSource,
+          onChanged: (selection) {
+            setState(() {
+              _accountId = selection?.accountId;
+              _creditCardId = selection?.creditCardId;
+              _customerId = selection?.customerId;
+            });
+          },
+        ),
+      ],
     );
   }
 
   ExpenseSourceSelection? _expenseSelection(
     List<Account> accounts,
     List<CreditCard> creditCards,
+    List<Customer> customers,
   ) {
     if (_accountId != null) {
       for (final account in accounts) {
@@ -227,6 +293,13 @@ final class _EditTransactionFormState
       for (final creditCard in creditCards) {
         if (creditCard.id == _creditCardId) {
           return ExpenseSourceSelection.creditCard(creditCard);
+        }
+      }
+    }
+    if (_customerId != null) {
+      for (final customer in customers) {
+        if (customer.id == _customerId) {
+          return ExpenseSourceSelection.customer(customer);
         }
       }
     }
@@ -245,6 +318,11 @@ final class _EditTransactionFormState
       if (creditCardsStatus == CreditCardsStatus.initial ||
           creditCardsStatus == CreditCardsStatus.failure) {
         unawaited(ref.read(creditCardsControllerProvider.notifier).load());
+      }
+      final customersStatus = ref.read(customersControllerProvider).status;
+      if (customersStatus == CustomersStatus.initial ||
+          customersStatus == CustomersStatus.failure) {
+        unawaited(ref.read(customersControllerProvider.notifier).load());
       }
     }
 
@@ -281,6 +359,7 @@ final class _EditTransactionFormState
             transactionId: widget.transaction.id,
             accountId: _accountId,
             creditCardId: _creditCardId,
+            customerId: _customerId,
             amount: _parseAmount(_amountController.text)!,
             description: _descriptionController.text.trim(),
             categoryId: _categoryId,
@@ -306,11 +385,7 @@ final class _ImmutableTransactionFields extends StatelessWidget {
       spacing: AppSpacing.sm,
       runSpacing: AppSpacing.sm,
       children: [
-        Chip(
-          label: Text(
-            TransactionStrings.transactionType(transaction.transactionType),
-          ),
-        ),
+        Chip(label: Text(TransactionStrings.transactionTypeFor(transaction))),
         Chip(
           label: Text(TransactionStrings.transactionSource(transaction.source)),
         ),

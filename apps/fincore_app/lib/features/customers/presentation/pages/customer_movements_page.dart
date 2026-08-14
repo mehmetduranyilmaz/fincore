@@ -9,6 +9,7 @@ import 'package:fincore_app/core/widgets/app_loading_view.dart';
 import 'package:fincore_app/features/customers/presentation/constants/customer_strings.dart';
 import 'package:fincore_app/features/customers/domain/entities/customer_movement.dart';
 import 'package:fincore_app/features/customers/presentation/providers/customer_balance_provider.dart';
+import 'package:fincore_app/features/transactions/presentation/constants/transaction_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -53,20 +54,36 @@ final class CustomerMovementsPage extends ConsumerWidget {
             itemBuilder: (context, index) {
               final item = items[index];
               final movement = item.transaction;
-              final isCollection = movement.customerBalanceDelta! < 0;
+              final isCreditExpense = movement.isCustomerCreditExpense;
+              final isCollection =
+                  movement.isCustomerPayment &&
+                  movement.customerBalanceDelta! < 0;
+              final movementLabel = isCreditExpense
+                  ? TransactionStrings.customerCreditExpense
+                  : isCollection
+                  ? CustomerStrings.collection
+                  : CustomerStrings.payment;
+              final sourceLabel = isCreditExpense
+                  ? TransactionStrings.openAccount
+                  : movement.accountId != null
+                  ? 'Kasa/Banka'
+                  : 'Kredi Kartı';
               return AppCard(
                 child: ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: CircleAvatar(
                     child: Icon(
-                      isCollection ? Icons.call_received : Icons.call_made,
+                      isCreditExpense
+                          ? Icons.receipt_long_outlined
+                          : isCollection
+                          ? Icons.call_received
+                          : Icons.call_made,
                     ),
                   ),
                   title: Text(movement.merchant),
                   subtitle: Text(
                     '${AppFormatters.date(movement.transactionDate)} • '
-                    '${isCollection ? CustomerStrings.collection : CustomerStrings.payment} • '
-                    '${movement.accountId != null ? 'Kasa/Banka' : 'Kredi Kartı'}',
+                    '$movementLabel • $sourceLabel',
                   ),
                   trailing: Column(
                     mainAxisSize: MainAxisSize.min,

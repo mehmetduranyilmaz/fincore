@@ -110,6 +110,7 @@ calculateExpenseCategoryReportProvider =
         ref.watch(categoryRepositoryProvider),
         ref.watch(accountRepositoryProvider),
         ref.watch(creditCardRepositoryProvider),
+        ref.watch(customerRepositoryProvider),
       ),
     );
 
@@ -355,6 +356,7 @@ final Provider<UpdateTransactionUseCase> updateTransactionProvider =
       (ref) => UpdateTransactionUseCase(
         ref.watch(transactionRepositoryProvider),
         categoryValidator: ref.watch(transactionCategoryValidatorProvider),
+        customerRepository: ref.watch(customerRepositoryProvider),
       ),
     );
 
@@ -366,6 +368,7 @@ final Provider<CreateManualExpenseUseCase> createManualExpenseProvider =
           installmentTransactionRepositoryProvider,
         ),
         categoryValidator: ref.watch(transactionCategoryValidatorProvider),
+        customerRepository: ref.watch(customerRepositoryProvider),
       ),
     );
 

@@ -31,6 +31,31 @@ void main() {
     );
   });
 
+  test(
+    'accepts a source-free open-account expense only with debt metadata',
+    () {
+      final transaction = _createTransaction(
+        accountId: null,
+        creditCardId: null,
+        customerId: 'customer-1',
+        customerBalanceDelta: -100,
+      );
+
+      expect(transaction.isCustomerCreditExpense, isTrue);
+      expect(transaction.isActualExpense, isTrue);
+
+      expect(
+        () => _createTransaction(
+          accountId: null,
+          creditCardId: null,
+          customerId: 'customer-1',
+          customerBalanceDelta: 100,
+        ),
+        throwsArgumentError,
+      );
+    },
+  );
+
   test('distinguishes card debt payments from customer card payments', () {
     final cardDebtPayment = _createTransaction(
       accountId: null,

@@ -102,6 +102,37 @@ void main() {
     expect(await customerBalance.execute('customer-1'), 500);
     expect((await accountBalance.execute('account-1')).currentBalance, 1000);
   });
+
+  test('deleting an open-account expense reverses the customer debt', () async {
+    final expense = Transaction(
+      id: 'open-account-expense',
+      accountId: null,
+      creditCardId: null,
+      amount: 750,
+      transactionType: TransactionType.expense,
+      categoryId: 'training',
+      merchant: 'Eğitim',
+      note: null,
+      transactionDate: DateTime(2026, 8, 7),
+      source: TransactionSource.manual,
+      isDeleted: false,
+      customerId: 'customer-1',
+      customerBalanceDelta: -750,
+    );
+    final repository = TransactionRepositoryImpl(
+      TransactionMockDataSource(initialTransactions: [expense]),
+    );
+    final customerBalance = CalculateCustomerBalanceUseCase(
+      const _CustomerRepository(),
+      repository,
+    );
+    expect(await customerBalance.execute('customer-1'), -250);
+
+    await DeleteTransactionUseCase(repository, repository).execute(expense.id);
+
+    expect(await customerBalance.execute('customer-1'), 500);
+    expect(await repository.getById(expense.id), isNull);
+  });
 }
 
 final class _CustomerRepository implements CustomerRepository {

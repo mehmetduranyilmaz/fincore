@@ -32,6 +32,11 @@ final class TransactionDetailsView extends StatelessWidget {
                   ? 'Tahsilat'
                   : 'Ödeme',
             ),
+          if (transaction.isCustomerCreditExpense)
+            const _DetailRow(
+              label: 'Müşteri İşlemi',
+              value: TransactionStrings.customerCreditExpense,
+            ),
           _DetailRow(
             label: TransactionStrings.description,
             value: transaction.merchant,
@@ -41,10 +46,14 @@ final class TransactionDetailsView extends StatelessWidget {
             value: AppFormatters.date(transaction.transactionDate),
           ),
           _DetailRow(
-            label: transaction.accountId != null
+            label: transaction.isCustomerCreditExpense
+                ? TransactionStrings.openAccountCustomer
+                : transaction.accountId != null
                 ? TransactionStrings.account
                 : TransactionStrings.creditCard,
-            value: transaction.accountId != null
+            value: transaction.isCustomerCreditExpense
+                ? TransactionStrings.openAccount
+                : transaction.accountId != null
                 ? AccountStrings.nameFromId(transaction.accountId!)
                 : TransactionStrings.creditCardName(transaction.creditCardId!),
           ),

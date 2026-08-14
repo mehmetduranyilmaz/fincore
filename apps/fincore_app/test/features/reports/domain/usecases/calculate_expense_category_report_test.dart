@@ -6,6 +6,8 @@ import 'package:fincore_app/features/categories/domain/entities/category_type.da
 import 'package:fincore_app/features/categories/domain/repositories/category_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/customers/domain/entities/customer.dart';
+import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:fincore_app/features/reports/domain/entities/expense_report_period.dart';
 import 'package:fincore_app/features/reports/domain/usecases/calculate_expense_category_report.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
@@ -21,6 +23,7 @@ void main() {
       const _CategoryRepository(),
       const _AccountRepository(),
       const _CreditCardRepository(),
+      const _CustomerRepository(),
     );
 
     final result = await useCase.execute(
@@ -29,15 +32,15 @@ void main() {
 
     expect(result.currencies.map((item) => item.currencyCode), ['TRY', 'USD']);
     final tryReport = result.currencies.first;
-    expect(tryReport.totalAmount, 300);
-    expect(tryReport.transactionCount, 2);
-    expect(tryReport.averageTransactionAmount, 150);
+    expect(tryReport.totalAmount, 375);
+    expect(tryReport.transactionCount, 3);
+    expect(tryReport.averageTransactionAmount, 125);
     expect(tryReport.categories.map((item) => item.name), [
       'Groceries',
       'Kategorisiz',
     ]);
-    expect(tryReport.categories.first.amount, 200);
-    expect(tryReport.categories.first.percentage, closeTo(2 / 3, 0.0001));
+    expect(tryReport.categories.first.amount, 275);
+    expect(tryReport.categories.first.percentage, closeTo(275 / 375, 0.0001));
     expect(tryReport.categories.last.amount, 100);
     expect(result.currencies.last.totalAmount, 50);
   });
@@ -67,6 +70,13 @@ final _transactions = [
     creditCardId: 'usd-card',
     amount: 50,
     categoryId: 'category-grocery',
+  ),
+  _transaction(
+    id: 'open-account-training',
+    amount: 75,
+    categoryId: 'category-grocery',
+    customerId: 'customer-1',
+    customerBalanceDelta: -75,
   ),
   _transaction(
     id: 'old-expense',
@@ -211,4 +221,32 @@ final class _CreditCardRepository implements CreditCardRepository {
       isArchived: false,
     ),
   ];
+}
+
+final class _CustomerRepository implements CustomerRepository {
+  const _CustomerRepository();
+
+  static const customer = Customer(
+    id: 'customer-1',
+    name: 'Eğitim Kurumu',
+    openingBalance: 0,
+    currencyCode: 'TRY',
+    isArchived: false,
+  );
+
+  @override
+  Future<void> archive(String customerId) async {}
+
+  @override
+  Future<void> create(Customer customer) async {}
+
+  @override
+  Future<Customer?> getById(String customerId) async =>
+      customerId == customer.id ? customer : null;
+
+  @override
+  Future<List<Customer>> getCustomers() async => const [customer];
+
+  @override
+  Future<void> update(Customer customer) async {}
 }

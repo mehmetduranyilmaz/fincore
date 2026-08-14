@@ -20,6 +20,11 @@ abstract final class TransactionStrings {
   static const String cardMatchNotFound =
       'Fişteki kart bulunamadı. Yeni kart ekleyebilir veya listeden seçim yapabilirsiniz.';
   static const String installmentType = 'Ödeme Şekli';
+  static const String paymentStatus = 'Ödeme Durumu';
+  static const String cashPayment = 'Peşin';
+  static const String openAccount = 'Açık Hesap';
+  static const String openAccountCustomer = 'Müşteri';
+  static const String selectOpenAccountCustomer = 'Açık hesap müşterisi seçin';
   static const String singlePayment = 'Tek Çekim';
   static const String installment = 'Taksit';
   static const String installmentCount = 'Taksit Sayısı';
@@ -79,6 +84,7 @@ abstract final class TransactionStrings {
   static const String transfer = 'Transfer';
   static const String customerCreditCardPayment = 'K.K. ile Ödm';
   static const String creditCardDebtPayment = 'K.K. Borç Ödm';
+  static const String customerCreditExpense = 'Açık Hesap Gider';
   static const String manual = 'Manuel';
   static const String receiptScan = 'Fiş Tarama';
   static const String imported = 'İçe Aktarma';
@@ -99,6 +105,7 @@ abstract final class TransactionStrings {
     if (transaction.isCustomerCreditCardPayment) {
       return customerCreditCardPayment;
     }
+    if (transaction.isCustomerCreditExpense) return customerCreditExpense;
     if (transaction.isCreditCardPayment) return creditCardDebtPayment;
     return transactionType(transaction.transactionType);
   }

@@ -1,3 +1,4 @@
+import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:fincore_app/features/transactions/domain/entities/create_manual_expense_input.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
@@ -16,6 +17,7 @@ final class CreateManualExpenseUseCase {
     this._repository, {
     this.installmentRepository,
     this.categoryValidator,
+    this.customerRepository,
     TransactionClock? clock,
     TransactionIdGenerator? idGenerator,
   }) : _clock = clock ?? DateTime.now,
@@ -24,12 +26,14 @@ final class CreateManualExpenseUseCase {
   final TransactionRepository _repository;
   final InstallmentTransactionRepository? installmentRepository;
   final TransactionCategoryValidator? categoryValidator;
+  final CustomerRepository? customerRepository;
   final TransactionClock _clock;
   final TransactionIdGenerator _idGenerator;
 
   Future<Transaction> execute(CreateManualExpenseInput input) async {
     _validate(input);
     await _validateCategory(input.categoryId);
+    await _validateCustomer(input.customerId);
 
     final transactionId = _idGenerator();
     final installmentAmounts = input.installmentAmounts.isEmpty
@@ -58,6 +62,8 @@ final class CreateManualExpenseUseCase {
               : input.transactionDate,
           source: TransactionSource.manual,
           isDeleted: false,
+          customerId: input.customerId,
+          customerBalanceDelta: input.customerId == null ? null : -amount,
           installmentPlanId: installmentPlanId,
           installmentNumber: isInstallment ? index + 1 : null,
           installmentCount: isInstallment ? installmentAmounts.length : null,
@@ -88,14 +94,32 @@ final class CreateManualExpenseUseCase {
     );
   }
 
+  Future<void> _validateCustomer(String? customerId) async {
+    if (customerId == null) return;
+    final repository = customerRepository;
+    if (repository == null) {
+      throw StateError('Customer repository is required.');
+    }
+    final customer = await repository.getById(customerId);
+    if (customer == null || customer.isArchived) {
+      throw ArgumentError.value(customerId, 'customerId');
+    }
+  }
+
   void _validate(CreateManualExpenseInput input) {
     ManualTransactionValidator.validateAmount(input.amount);
     ManualTransactionValidator.validateDescription(input.description);
 
-    Transaction.validateSource(
-      accountId: input.accountId,
-      creditCardId: input.creditCardId,
-    );
+    final sourceCount = [
+      input.accountId,
+      input.creditCardId,
+      input.customerId,
+    ].nonNulls.length;
+    if (sourceCount != 1) {
+      throw ArgumentError(
+        'Exactly one account, credit card, or open-account customer is required.',
+      );
+    }
 
     ManualTransactionValidator.validateDate(input.transactionDate, _clock());
 

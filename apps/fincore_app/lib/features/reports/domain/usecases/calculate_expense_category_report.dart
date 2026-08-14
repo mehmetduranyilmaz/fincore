@@ -4,6 +4,8 @@ import 'package:fincore_app/features/categories/domain/entities/category.dart';
 import 'package:fincore_app/features/categories/domain/repositories/category_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
+import 'package:fincore_app/features/customers/domain/entities/customer.dart';
 import 'package:fincore_app/features/reports/domain/entities/expense_category_report.dart';
 import 'package:fincore_app/features/reports/domain/entities/expense_report_period.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
@@ -16,6 +18,7 @@ final class CalculateExpenseCategoryReportUseCase {
     this._categoryRepository,
     this._accountRepository,
     this._creditCardRepository,
+    this._customerRepository,
   );
 
   static const String unknownCurrencyCode = 'N/A';
@@ -26,6 +29,7 @@ final class CalculateExpenseCategoryReportUseCase {
   final CategoryRepository _categoryRepository;
   final AccountRepository _accountRepository;
   final CreditCardRepository _creditCardRepository;
+  final CustomerRepository _customerRepository;
 
   Future<ExpenseCategoryReport> execute(ExpenseReportPeriod period) async {
     final results = await Future.wait<Object>([
@@ -39,16 +43,21 @@ final class CalculateExpenseCategoryReportUseCase {
       _categoryRepository.getAll(),
       _accountRepository.getAccounts(),
       _creditCardRepository.getCreditCards(),
+      _customerRepository.getCustomers(),
     ]);
     final transactions = results[0] as List<Transaction>;
     final categories = results[1] as List<Category>;
     final accounts = results[2] as List<Account>;
     final creditCards = results[3] as List<CreditCard>;
+    final customers = results[4] as List<Customer>;
     final accountCurrencies = {
       for (final account in accounts) account.id: account.currencyCode,
     };
     final cardCurrencies = {
       for (final card in creditCards) card.id: card.currencyCode,
+    };
+    final customerCurrencies = {
+      for (final customer in customers) customer.id: customer.currencyCode,
     };
     final categoryById = {
       for (final category in categories) category.id: category,
@@ -59,7 +68,9 @@ final class CalculateExpenseCategoryReportUseCase {
       if (!_belongsToPeriod(transaction, period)) continue;
       final currencyCode = transaction.accountId != null
           ? accountCurrencies[transaction.accountId]
-          : cardCurrencies[transaction.creditCardId];
+          : transaction.creditCardId != null
+          ? cardCurrencies[transaction.creditCardId]
+          : customerCurrencies[transaction.customerId];
       final normalizedCurrency = currencyCode ?? unknownCurrencyCode;
       final categoryKey = transaction.categoryId ?? _uncategorizedKey;
       final category = transaction.categoryId == null

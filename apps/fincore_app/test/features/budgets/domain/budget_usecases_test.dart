@@ -130,6 +130,7 @@ void main() {
       TransactionMockDataSource(
         initialTransactions: [
           _transaction('counted', 5250, TransactionType.expense),
+          _openAccountExpense('open-account-training', 250),
           _transaction(
             'customer-card-payment',
             750,
@@ -167,9 +168,9 @@ void main() {
     ).execute(budget);
 
     expect(progress.budgetAmount, 8000);
-    expect(progress.spentAmount, 5250);
-    expect(progress.remainingAmount, 2750);
-    expect(progress.progress, closeTo(0.65625, 0.00001));
+    expect(progress.spentAmount, 5500);
+    expect(progress.remainingAmount, 2500);
+    expect(progress.progress, closeTo(0.6875, 0.00001));
   });
 }
 
@@ -231,5 +232,23 @@ Transaction _transaction(
     customerId: customerId,
     customerBalanceDelta: customerBalanceDelta,
     paymentGroupId: paymentGroupId,
+  );
+}
+
+Transaction _openAccountExpense(String id, double amount) {
+  return Transaction(
+    id: id,
+    accountId: null,
+    creditCardId: null,
+    amount: amount,
+    transactionType: TransactionType.expense,
+    categoryId: 'expense',
+    merchant: id,
+    note: null,
+    transactionDate: _date,
+    source: TransactionSource.manual,
+    isDeleted: false,
+    customerId: 'customer-1',
+    customerBalanceDelta: -amount,
   );
 }

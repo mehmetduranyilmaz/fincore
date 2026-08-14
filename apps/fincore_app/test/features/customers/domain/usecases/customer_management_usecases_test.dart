@@ -123,6 +123,24 @@ void main() {
       throwsA(isA<CustomerOperationException>()),
     );
   });
+
+  test(
+    'open-account expense and later payment update the balance once',
+    () async {
+      final customers = _CustomerRepository(
+        _customer.copyWith(openingBalance: 0),
+      );
+      final balance = CalculateCustomerBalanceUseCase(
+        customers,
+        _TransactionRepository([
+          _openAccountExpense(750),
+          _customerPayment(250),
+        ]),
+      );
+
+      expect(await balance.execute(_customer.id), -500);
+    },
+  );
 }
 
 final class _CustomerUsageRepository implements CustomerUsageRepository {
@@ -157,6 +175,43 @@ Transaction _movement(double delta) {
     isDeleted: false,
     customerId: _customer.id,
     customerBalanceDelta: delta,
+  );
+}
+
+Transaction _openAccountExpense(double amount) {
+  return Transaction(
+    id: 'open-account-expense',
+    accountId: null,
+    creditCardId: null,
+    amount: amount,
+    transactionType: TransactionType.expense,
+    categoryId: 'training',
+    merchant: 'Eğitim',
+    note: null,
+    transactionDate: DateTime(2026, 8, 7),
+    source: TransactionSource.manual,
+    isDeleted: false,
+    customerId: _customer.id,
+    customerBalanceDelta: -amount,
+  );
+}
+
+Transaction _customerPayment(double amount) {
+  return Transaction(
+    id: 'customer-payment',
+    accountId: 'account-1',
+    creditCardId: null,
+    amount: amount,
+    transactionType: TransactionType.transfer,
+    categoryId: null,
+    merchant: 'Müşteriye ödeme',
+    note: null,
+    transactionDate: DateTime(2026, 8, 8),
+    source: TransactionSource.manual,
+    isDeleted: false,
+    paymentGroupId: 'customer-payment-group',
+    customerId: _customer.id,
+    customerBalanceDelta: amount,
   );
 }
 

@@ -3,6 +3,7 @@ final class UpdateTransactionInput {
     required this.transactionId,
     required this.accountId,
     required this.creditCardId,
+    this.customerId,
     required this.amount,
     required this.description,
     required this.categoryId,
@@ -12,6 +13,7 @@ final class UpdateTransactionInput {
   final String transactionId;
   final String? accountId;
   final String? creditCardId;
+  final String? customerId;
   final double amount;
   final String description;
   final String? categoryId;

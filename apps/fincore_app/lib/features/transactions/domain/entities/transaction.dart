@@ -24,7 +24,19 @@ final class Transaction {
     String? customerId,
     double? customerBalanceDelta,
   }) {
-    validateSource(accountId: accountId, creditCardId: creditCardId);
+    final isCustomerCreditExpense =
+        accountId == null &&
+        creditCardId == null &&
+        customerId != null &&
+        customerBalanceDelta != null &&
+        customerBalanceDelta < 0 &&
+        transactionType == TransactionType.expense &&
+        paymentGroupId == null;
+    validateSource(
+      accountId: accountId,
+      creditCardId: creditCardId,
+      allowNoFinancialSource: isCustomerCreditExpense,
+    );
     validateInstallment(
       installmentPlanId: installmentPlanId,
       installmentNumber: installmentNumber,
@@ -139,6 +151,20 @@ final class Transaction {
         customerBalanceDelta! > 0;
   }
 
+  bool get isCustomerCreditExpense {
+    return accountId == null &&
+        creditCardId == null &&
+        customerId != null &&
+        customerBalanceDelta != null &&
+        customerBalanceDelta! < 0 &&
+        transactionType == TransactionType.expense &&
+        paymentGroupId == null;
+  }
+
+  bool get hasCustomerLedgerMovement {
+    return customerId != null && customerBalanceDelta != null;
+  }
+
   bool get isActualExpense {
     return transactionType == TransactionType.expense && !isCustomerPayment;
   }
@@ -168,7 +194,11 @@ final class Transaction {
   static void validateSource({
     required String? accountId,
     required String? creditCardId,
+    bool allowNoFinancialSource = false,
   }) {
+    if (allowNoFinancialSource && accountId == null && creditCardId == null) {
+      return;
+    }
     if ((accountId == null) == (creditCardId == null)) {
       throw ArgumentError(
         'Exactly one of accountId and creditCardId must be provided.',

@@ -2,6 +2,7 @@ import 'package:fincore_app/features/accounts/domain/entities/account.dart';
 import 'package:fincore_app/features/accounts/domain/entities/account_type.dart';
 import 'package:fincore_app/features/accounts/presentation/constants/account_strings.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
+import 'package:fincore_app/features/customers/domain/entities/customer.dart';
 import 'package:fincore_app/features/transactions/presentation/constants/transaction_strings.dart';
 import 'package:fincore_app/features/transactions/presentation/formatters/payment_source_formatter.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ final class ExpenseSourceSelection {
   const ExpenseSourceSelection._({
     required this.accountId,
     required this.creditCardId,
+    required this.customerId,
     required this.label,
     required this.description,
     required this.kind,
@@ -19,6 +21,7 @@ final class ExpenseSourceSelection {
     return ExpenseSourceSelection._(
       accountId: account.id,
       creditCardId: null,
+      customerId: null,
       label: PaymentSourceFormatter.account(account),
       description: AccountStrings.displayName(account.name),
       kind: account.type == AccountType.cash
@@ -31,14 +34,30 @@ final class ExpenseSourceSelection {
     return ExpenseSourceSelection._(
       accountId: null,
       creditCardId: creditCard.id,
+      customerId: null,
       label: PaymentSourceFormatter.creditCard(creditCard),
       description: creditCard.cardName,
       kind: ExpenseSourceKind.creditCard,
     );
   }
 
+  factory ExpenseSourceSelection.customer(Customer customer) {
+    final currency = customer.currencyCode == 'TRY'
+        ? 'TL'
+        : customer.currencyCode;
+    return ExpenseSourceSelection._(
+      accountId: null,
+      creditCardId: null,
+      customerId: customer.id,
+      label: 'AH-${customer.name}',
+      description: '$currency • Açık hesap',
+      kind: ExpenseSourceKind.openAccount,
+    );
+  }
+
   final String? accountId;
   final String? creditCardId;
+  final String? customerId;
   final String label;
   final String description;
   final ExpenseSourceKind kind;
@@ -48,19 +67,21 @@ final class ExpenseSourceSelection {
     return identical(this, other) ||
         other is ExpenseSourceSelection &&
             accountId == other.accountId &&
-            creditCardId == other.creditCardId;
+            creditCardId == other.creditCardId &&
+            customerId == other.customerId;
   }
 
   @override
-  int get hashCode => Object.hash(accountId, creditCardId);
+  int get hashCode => Object.hash(accountId, creditCardId, customerId);
 }
 
-enum ExpenseSourceKind { bankAccount, cash, creditCard }
+enum ExpenseSourceKind { bankAccount, cash, creditCard, openAccount }
 
 final class ExpenseSourceSelector extends StatelessWidget {
   const ExpenseSourceSelector({
     required this.accounts,
     required this.creditCards,
+    this.customers = const [],
     required this.value,
     required this.onChanged,
     this.label = TransactionStrings.paymentSource,
@@ -70,6 +91,7 @@ final class ExpenseSourceSelector extends StatelessWidget {
 
   final List<Account> accounts;
   final List<CreditCard> creditCards;
+  final List<Customer> customers;
   final ExpenseSourceSelection? value;
   final ValueChanged<ExpenseSourceSelection?> onChanged;
   final String label;
@@ -84,6 +106,10 @@ final class ExpenseSourceSelector extends StatelessWidget {
         (creditCard) => !creditCard.isArchived,
       ))
         ExpenseSourceSelection.creditCard(creditCard),
+      for (final customer in customers.where(
+        (customer) => !customer.isArchived,
+      ))
+        ExpenseSourceSelection.customer(customer),
     ];
 
     return DropdownButtonFormField<ExpenseSourceSelection>(
@@ -131,6 +157,7 @@ final class _ExpenseSourceOption extends StatelessWidget {
       ExpenseSourceKind.bankAccount => Icons.account_balance_outlined,
       ExpenseSourceKind.cash => Icons.account_balance_wallet_outlined,
       ExpenseSourceKind.creditCard => Icons.credit_card_outlined,
+      ExpenseSourceKind.openAccount => Icons.person_outline,
     };
 
     return Row(

@@ -25,8 +25,9 @@ final class GetCustomerMovementsUseCase {
         transactions
             .where(
               (transaction) =>
+                  !transaction.isDeleted &&
                   transaction.customerId == customerId &&
-                  transaction.isCustomerPayment,
+                  transaction.hasCustomerLedgerMovement,
             )
             .toList()
           ..sort(_compareChronologically);
