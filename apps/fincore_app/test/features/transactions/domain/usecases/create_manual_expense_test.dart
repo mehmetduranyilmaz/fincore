@@ -201,6 +201,35 @@ void main() {
       throwsArgumentError,
     );
   });
+
+  test('creates an open-account expense installment plan', () async {
+    final firstInstallment = await useCase.execute(
+      CreateManualExpenseInput(
+        accountId: null,
+        creditCardId: null,
+        customerId: 'customer-1',
+        amount: 100,
+        description: 'Eğitim gideri',
+        categoryId: null,
+        transactionDate: DateTime(2026, 7, 25),
+        installmentAmounts: const [33.33, 33.33, 33.34],
+      ),
+    );
+
+    expect(firstInstallment.customerId, 'customer-1');
+    expect(repository.transactions.map((item) => item.amount), [
+      33.33,
+      33.33,
+      33.34,
+    ]);
+    expect(
+      repository.transactions.fold<double>(
+        0,
+        (sum, item) => sum + item.customerBalanceDelta!,
+      ),
+      -100,
+    );
+  });
 }
 
 final class _CustomerRepository implements CustomerRepository {

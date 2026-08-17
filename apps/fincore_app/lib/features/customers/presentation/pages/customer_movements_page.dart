@@ -2,6 +2,7 @@ import 'package:fincore_app/app/router/app_routes.dart';
 import 'package:fincore_app/core/errors/error_mapper.dart';
 import 'package:fincore_app/core/formatters/app_formatters.dart';
 import 'package:fincore_app/core/theme/app_spacing.dart';
+import 'package:fincore_app/core/reporting/pdf_report_actions.dart';
 import 'package:fincore_app/core/widgets/app_card.dart';
 import 'package:fincore_app/core/widgets/app_empty_state.dart';
 import 'package:fincore_app/core/widgets/app_error_view.dart';
@@ -9,6 +10,7 @@ import 'package:fincore_app/core/widgets/app_loading_view.dart';
 import 'package:fincore_app/features/customers/presentation/constants/customer_strings.dart';
 import 'package:fincore_app/features/customers/domain/entities/customer_movement.dart';
 import 'package:fincore_app/features/customers/presentation/providers/customer_balance_provider.dart';
+import 'package:fincore_app/features/reports/presentation/financial_report_factories.dart';
 import 'package:fincore_app/features/transactions/presentation/constants/transaction_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,6 +32,17 @@ final class CustomerMovementsPage extends ConsumerWidget {
               ? CustomerStrings.movements
               : '${customer.value!.name} • ${CustomerStrings.movements}',
         ),
+        actions: [
+          PdfReportActions(
+            report:
+                customer.value != null && movements.value?.isNotEmpty == true
+                ? FinancialReportFactories.customerMovements(
+                    customer: customer.value!,
+                    movements: movements.value!,
+                  )
+                : null,
+          ),
+        ],
       ),
       body: movements.when(
         loading: () => const AppLoadingView(),

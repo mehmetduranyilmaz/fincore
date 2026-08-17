@@ -20,6 +20,7 @@ import 'package:fincore_app/features/credit_cards/data/datasources/credit_card_s
 import 'package:fincore_app/features/customers/data/datasources/customer_local_data_source.dart';
 import 'package:fincore_app/features/transactions/data/datasources/transaction_mock_data_source.dart';
 import 'package:fincore_app/features/transactions/data/datasources/transaction_local_data_source.dart';
+import 'package:fincore_app/features/transactions/data/datasources/recurring_expense_plan_local_data_source.dart';
 import 'package:fincore_app/features/transactions/data/services/receipt_scanner_impl.dart';
 import 'package:fincore_app/features/transactions/domain/services/receipt_scanner.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -109,6 +110,19 @@ final Provider<InstallmentTransactionDataSource>
 installmentTransactionDataSourceProvider =
     Provider<InstallmentTransactionDataSource>(
       (ref) => ref.watch(transactionLocalDataSourceProvider),
+    );
+
+final recurringExpensePlanLocalDataSourceProvider =
+    Provider<RecurringExpensePlanLocalDataSource>(
+      (ref) => RecurringExpensePlanLocalDataSource(
+        ref.watch(secureStorageServiceProvider),
+      ),
+    );
+
+final Provider<RecurringExpensePlanDataSource>
+recurringExpensePlanDataSourceProvider =
+    Provider<RecurringExpensePlanDataSource>(
+      (ref) => ref.watch(recurringExpensePlanLocalDataSourceProvider),
     );
 
 final imagePickerProvider = Provider<ImagePicker>((ref) => ImagePicker());

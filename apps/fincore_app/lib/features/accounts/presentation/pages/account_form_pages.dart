@@ -229,7 +229,6 @@ final class _AccountFormState extends ConsumerState<_AccountForm> {
                   const SizedBox(height: AppSpacing.md),
                   AppTextField(
                     controller: _balanceController,
-                    enabled: !hasMovements,
                     label: AccountStrings.openingBalance,
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
@@ -243,6 +242,25 @@ final class _AccountFormState extends ConsumerState<_AccountForm> {
                         ? AccountStrings.invalidAmount
                         : null,
                   ),
+                  if (hasMovements) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.info_outline,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: AppSpacing.sm),
+                        const Expanded(
+                          child: Text(
+                            AccountStrings.openingBalanceCorrectionHint,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (command.errorMessage case final message?) ...[
                     const SizedBox(height: AppSpacing.md),
                     Text(

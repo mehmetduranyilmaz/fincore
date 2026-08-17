@@ -2,12 +2,20 @@ import 'dart:async';
 
 import 'package:fincore_app/app/router/app_routes.dart';
 import 'package:fincore_app/core/theme/app_spacing.dart';
+import 'package:fincore_app/core/reporting/pdf_report_actions.dart';
 import 'package:fincore_app/core/widgets/app_empty_state.dart';
 import 'package:fincore_app/core/widgets/app_error_view.dart';
 import 'package:fincore_app/core/widgets/app_loading_view.dart';
 import 'package:fincore_app/core/widgets/app_section_header.dart';
 import 'package:fincore_app/features/accounts/domain/entities/account.dart';
 import 'package:fincore_app/features/accounts/presentation/controllers/accounts_controller.dart';
+import 'package:fincore_app/features/categories/domain/entities/category.dart';
+import 'package:fincore_app/features/categories/presentation/controllers/categories_controller.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
+import 'package:fincore_app/features/credit_cards/presentation/controllers/credit_cards_controller.dart';
+import 'package:fincore_app/features/customers/domain/entities/customer.dart';
+import 'package:fincore_app/features/customers/presentation/controllers/customers_controller.dart';
+import 'package:fincore_app/features/reports/presentation/financial_report_factories.dart';
 import 'package:fincore_app/features/transactions/presentation/constants/transaction_strings.dart';
 import 'package:fincore_app/features/transactions/presentation/controllers/transactions_controller.dart';
 import 'package:fincore_app/features/transactions/presentation/widgets/transactions_list.dart';
@@ -35,6 +43,21 @@ final class _TransactionsPageState extends ConsumerState<TransactionsPage> {
             accountsStatus == AccountsStatus.failure) {
           unawaited(ref.read(accountsControllerProvider.notifier).load());
         }
+        final cardsStatus = ref.read(creditCardsControllerProvider).status;
+        if (cardsStatus == CreditCardsStatus.initial ||
+            cardsStatus == CreditCardsStatus.failure) {
+          unawaited(ref.read(creditCardsControllerProvider.notifier).load());
+        }
+        final customersStatus = ref.read(customersControllerProvider).status;
+        if (customersStatus == CustomersStatus.initial ||
+            customersStatus == CustomersStatus.failure) {
+          unawaited(ref.read(customersControllerProvider.notifier).load());
+        }
+        final categoriesStatus = ref.read(categoriesControllerProvider).status;
+        if (categoriesStatus == CategoriesStatus.initial ||
+            categoriesStatus == CategoriesStatus.failure) {
+          unawaited(ref.read(categoriesControllerProvider.notifier).load());
+        }
       }
     });
   }
@@ -45,10 +68,22 @@ final class _TransactionsPageState extends ConsumerState<TransactionsPage> {
     final accounts = ref.watch(
       accountsControllerProvider.select((state) => state.accounts),
     );
+    final creditCards = ref.watch(
+      creditCardsControllerProvider.select((state) => state.creditCards),
+    );
+    final customers = ref.watch(
+      customersControllerProvider.select((state) => state.customers),
+    );
+    final categories = ref.watch(
+      categoriesControllerProvider.select((state) => state.categories),
+    );
 
     return _TransactionsContent(
       state: state,
       accounts: accounts,
+      creditCards: creditCards,
+      customers: customers,
+      categories: categories,
       onRetry: ref.read(transactionsControllerProvider.notifier).load,
     );
   }
@@ -58,11 +93,17 @@ final class _TransactionsContent extends StatelessWidget {
   const _TransactionsContent({
     required this.state,
     required this.accounts,
+    required this.creditCards,
+    required this.customers,
+    required this.categories,
     required this.onRetry,
   });
 
   final TransactionsState state;
   final List<Account> accounts;
+  final List<CreditCard> creditCards;
+  final List<Customer> customers;
+  final List<Category> categories;
   final VoidCallback onRetry;
 
   @override
@@ -101,6 +142,22 @@ final class _TransactionsContent extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
+          Align(
+            alignment: Alignment.centerRight,
+            child: PdfReportActions(
+              report:
+                  state.status == TransactionsStatus.loaded &&
+                      state.transactions.isNotEmpty
+                  ? FinancialReportFactories.transactions(
+                      transactions: state.transactions,
+                      accounts: accounts,
+                      creditCards: creditCards,
+                      customers: customers,
+                      categories: categories,
+                    )
+                  : null,
+            ),
+          ),
           TransactionFilters(accounts: accounts),
           const SizedBox(height: AppSpacing.lg),
           Expanded(

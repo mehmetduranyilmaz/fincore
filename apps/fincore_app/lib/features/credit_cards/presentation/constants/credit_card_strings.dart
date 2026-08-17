@@ -65,14 +65,25 @@ abstract final class CreditCardStrings {
   static const String makePayment = 'Kredi Kartı Borcu Öde';
   static const String paymentCalendar = 'Aylık Ödeme Takvimi';
   static const String paymentCalendarHint =
-      'Bu ay ve sonraki aylardaki kredi kartı harcamaları, işlem ve taksit '
-      'ayına göre gösterilir. Farklı para birimleri birbirine eklenmez.';
-  static const String yearTotal = 'Yıl toplamı';
+      'Kredi kartı ödemeleri ve tekrarlayan gider planları aylara göre '
+      'gösterilir. Planlanan giderler vadesinden önce gerçek bakiyeleri '
+      'etkilemez. Farklı para birimleri birbirine eklenmez.';
+  static const String hideMonths = 'Ayları Gizle';
+  static const String showMonths = 'Ayları Göster';
   static const String noScheduledPayments = 'Planlanmış ödeme yok';
   static const String noScheduledPaymentsDescription =
       'Bu ay veya sonraki aylara ait kredi kartı harcaması bulunmuyor.';
   static const String paymentCalendarUnableToLoad =
       'Ödeme takvimi yüklenemedi.';
 
-  static String scheduledTransactionCount(int count) => '$count işlem/taksit';
+  static String scheduledTransactionCount({
+    required int confirmedCount,
+    required int plannedCount,
+  }) {
+    if (confirmedCount == 0) return '$plannedCount planlanan gider';
+    if (plannedCount == 0) return '$confirmedCount kesinleşmiş ödeme';
+    return '$confirmedCount kesinleşmiş • $plannedCount planlanan';
+  }
+
+  static String yearTotal(int year) => '$year Yılı Toplamı';
 }

@@ -83,6 +83,31 @@ void main() {
     );
   });
 
+  test('movement account allows correcting its opening balance', () async {
+    final accounts = _AccountRepository([_account]);
+    final transactions = _TransactionRepository([_expense]);
+    final updated = await UpdateAccountUseCase(accounts, accounts, transactions)
+        .execute(
+          const UpdateAccountInput(
+            accountId: 'account-1',
+            name: 'İş Bankası',
+            type: AccountType.checking,
+            currencyCode: 'TRY',
+            openingBalance: 250,
+            bankId: 'isbank',
+            iban: 'TR330006100519786457841326',
+          ),
+        );
+
+    final balance = await CalculateAccountBalanceUseCase(
+      transactions,
+      accountRepository: accounts,
+    ).execute(updated.id);
+
+    expect(updated.openingBalance, 250);
+    expect(balance.currentBalance, 225);
+  });
+
   test('rejects a duplicate IBAN even when formatted differently', () {
     final accounts = _AccountRepository([_account]);
 

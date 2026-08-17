@@ -132,6 +132,10 @@ final class AppDataRefreshCoordinator {
     }
   }
 
+  void recurringExpensePlanChanged() {
+    _ref.invalidate(creditCardPaymentCalendarProvider);
+  }
+
   Future<void> allDataRestored() async {
     _ref.invalidate(accountsControllerProvider);
     _ref.invalidate(budgetsControllerProvider);

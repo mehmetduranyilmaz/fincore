@@ -4,8 +4,14 @@ final class CreditCardPaymentMonth {
     required this.month,
     required Map<String, double> totalsByCurrency,
     required this.transactionCount,
+    this.plannedExpenseCount = 0,
   }) : totalsByCurrency = Map.unmodifiable(totalsByCurrency) {
-    if (year < 1 || month < 1 || month > 12 || transactionCount < 1) {
+    if (year < 1 ||
+        month < 1 ||
+        month > 12 ||
+        transactionCount < 1 ||
+        plannedExpenseCount < 0 ||
+        plannedExpenseCount > transactionCount) {
       throw ArgumentError('Invalid credit card payment month.');
     }
   }
@@ -14,6 +20,9 @@ final class CreditCardPaymentMonth {
   final int month;
   final Map<String, double> totalsByCurrency;
   final int transactionCount;
+  final int plannedExpenseCount;
+
+  int get confirmedTransactionCount => transactionCount - plannedExpenseCount;
 
   String get periodLabel => '$year-${month.toString().padLeft(2, '0')}';
 }

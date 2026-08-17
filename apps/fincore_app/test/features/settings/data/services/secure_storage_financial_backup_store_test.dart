@@ -50,6 +50,22 @@ void main() {
     );
     expect(storage.values, original);
   });
+
+  test('restores a backup created before recurring plans existed', () async {
+    final legacy = Map<String, String?>.from(_validData)
+      ..remove(SecureStorageFinancialBackupStore.recurringExpensePlansKey);
+    final storage = _MemoryStore(_validData);
+    final store = SecureStorageFinancialBackupStore(storage);
+
+    await store.replaceFinancialData(legacy);
+
+    expect(
+      await storage.read(
+        SecureStorageFinancialBackupStore.recurringExpensePlansKey,
+      ),
+      isNull,
+    );
+  });
 }
 
 final Map<String, String?> _validData = {

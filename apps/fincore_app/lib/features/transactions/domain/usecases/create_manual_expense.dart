@@ -136,8 +136,8 @@ final class CreateManualExpenseUseCase {
       }
       return;
     }
-    if (input.creditCardId == null) {
-      throw ArgumentError.value(input.creditCardId, 'creditCardId');
+    if (input.creditCardId == null && input.customerId == null) {
+      throw ArgumentError('Installments require a credit card or customer.');
     }
     InstallmentCalculator.validateCustomAmounts(
       input.amount,

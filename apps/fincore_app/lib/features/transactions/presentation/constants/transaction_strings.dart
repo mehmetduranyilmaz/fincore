@@ -33,6 +33,28 @@ abstract final class TransactionStrings {
       'Taksitlerin toplamı harcama tutarına eşit olmalıdır.';
   static const String installmentCardRequired =
       'Taksitli işlem için kredi kartı seçmelisiniz.';
+  static const String installmentSourceRequired =
+      'Taksitli işlem için kredi kartı veya açık hesap müşterisi seçmelisiniz.';
+  static const String expensePlanType = 'Gider Planı';
+  static const String oneTimeExpense = 'Tek Seferlik';
+  static const String recurringMonthlyExpense = 'Her Ay';
+  static const String occurrenceCount = 'Kaç Ay Tekrarlansın?';
+  static const String invalidOccurrenceCount = '2 ile 60 arasında ay girin.';
+  static const String recurringExpenseHint =
+      'Gelecek aylar ödeme takviminde planlanan gider olarak görünür; vadesinden önce gerçek bakiyeleri etkilemez.';
+  static const String saveRecurringExpense = 'Gider Planını Kaydet';
+  static const String manageRecurringExpenses = 'Tekrarlayan Giderler';
+  static const String recurringExpensesDescription =
+      'Aylık ödeme takvimine yansıyan planları buradan değiştirebilir veya silebilirsiniz.';
+  static const String noRecurringExpenses = 'Tekrarlayan gider planı yok';
+  static const String noRecurringExpensesDescription =
+      'Her ay ödenecek aidat ve benzeri giderleri manuel gider ekranından ekleyebilirsiniz.';
+  static const String editRecurringExpense = 'Gider Planını Düzenle';
+  static const String deleteRecurringExpense = 'Gider planı silinsin mi?';
+  static const String deleteRecurringExpenseDescription =
+      'Plan, gelecek aylardaki ödeme takviminden kaldırılacaktır.';
+  static const String recurringExpenseDeleted = 'Gider planı silindi.';
+  static const String recurringExpenseUpdated = 'Gider planı güncellendi.';
   static const String convertToInstallments = 'Taksitlendir';
   static const String convertToInstallmentsTitle = 'İşlemi Taksitlendir';
   static const String installmentNumber = 'Taksit';

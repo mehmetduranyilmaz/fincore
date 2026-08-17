@@ -8,6 +8,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets('renders month rows followed by each year total', (tester) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -28,8 +33,26 @@ void main() {
     expect(find.text('2025-11'), findsOneWidget);
     expect(find.text('2025-12'), findsOneWidget);
     expect(find.text('2026-01'), findsOneWidget);
-    expect(find.text('Yıl toplamı'), findsNWidgets(2));
+    expect(find.text('2025 Yılı Toplamı'), findsOneWidget);
+    expect(find.text('2026 Yılı Toplamı'), findsOneWidget);
     expect(find.text('600,00 ₺'), findsOneWidget);
+    expect(find.text('1 kesinleşmiş • 1 planlanan'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('payment_calendar_toggle_months')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ayları Göster'), findsOneWidget);
+    expect(find.text('2025-10'), findsNothing);
+    expect(find.text('2026-01'), findsNothing);
+    expect(find.text('2025 Yılı Toplamı'), findsOneWidget);
+    expect(find.text('2026 Yılı Toplamı'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('payment_calendar_toggle_months')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ayları Gizle'), findsOneWidget);
+    expect(find.text('2025-10'), findsOneWidget);
+    expect(find.text('2026-01'), findsOneWidget);
   });
 }
 
@@ -48,6 +71,7 @@ final _calendar = CreditCardPaymentCalendar([
         month: 11,
         totalsByCurrency: const {'TRY': 200},
         transactionCount: 2,
+        plannedExpenseCount: 1,
       ),
       CreditCardPaymentMonth(
         year: 2025,

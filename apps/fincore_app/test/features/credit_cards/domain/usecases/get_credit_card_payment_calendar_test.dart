@@ -2,9 +2,11 @@ import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.da
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_payment_calendar.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
+import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_plan.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
+import 'package:fincore_app/features/transactions/domain/repositories/recurring_expense_plan_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -27,6 +29,9 @@ void main() {
         ),
         _expense('account', null, 999, DateTime(2025, 11, 1)),
       ]),
+      recurringExpensePlanRepository: _RecurringExpensePlanRepository([
+        _aidatPlan,
+      ]),
       clock: () => DateTime(2025, 10, 8),
     );
 
@@ -41,9 +46,12 @@ void main() {
     ]);
     expect(year2025.months.first.totalsByCurrency, {'TRY': 100, 'USD': 20});
     expect(year2025.months.first.transactionCount, 2);
-    expect(year2025.totalsByCurrency, {'TRY': 175, 'USD': 20});
+    expect(year2025.months[1].totalsByCurrency, {'TRY': 90});
+    expect(year2025.months[1].confirmedTransactionCount, 1);
+    expect(year2025.months[1].plannedExpenseCount, 1);
+    expect(year2025.totalsByCurrency, {'TRY': 255, 'USD': 20});
     expect(calendar.years.last.months.single.periodLabel, '2026-01');
-    expect(calendar.years.last.totalsByCurrency, {'TRY': 10});
+    expect(calendar.years.last.totalsByCurrency, {'TRY': 50});
   });
 
   test('includes customer payments made by credit card', () async {
@@ -69,6 +77,38 @@ void main() {
     expect(month.totalsByCurrency, {'TRY': 22750});
     expect(month.transactionCount, 1);
   });
+}
+
+final _aidatPlan = RecurringExpensePlan(
+  id: 'aidat-plan',
+  accountId: 'account-1',
+  creditCardId: null,
+  customerId: null,
+  amount: 40,
+  description: 'Bina aidatı',
+  categoryId: 'category-aidat',
+  currencyCode: 'TRY',
+  firstDueDate: DateTime(2025, 11, 5),
+  occurrenceCount: 3,
+);
+
+final class _RecurringExpensePlanRepository
+    implements RecurringExpensePlanRepository {
+  const _RecurringExpensePlanRepository(this.plans);
+
+  final List<RecurringExpensePlan> plans;
+
+  @override
+  Future<void> create(RecurringExpensePlan plan) async {}
+
+  @override
+  Future<void> delete(String planId) async {}
+
+  @override
+  Future<List<RecurringExpensePlan>> getPlans() async => plans;
+
+  @override
+  Future<void> update(RecurringExpensePlan plan) async {}
 }
 
 Transaction _expense(

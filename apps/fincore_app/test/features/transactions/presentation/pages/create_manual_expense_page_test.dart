@@ -46,8 +46,10 @@ void main() {
     expect(find.text('Tutar'), findsOneWidget);
     expect(find.text('Açıklama'), findsOneWidget);
     expect(find.text('Hesap veya Kredi Kartı'), findsOneWidget);
-    expect(find.text('Taksit Sayısı'), findsOneWidget);
-    expect(find.text('Tek Çekim'), findsOneWidget);
+    expect(find.text('Gider Planı'), findsOneWidget);
+    expect(find.text('Tek Seferlik'), findsOneWidget);
+    expect(find.text('Her Ay'), findsOneWidget);
+    expect(find.text('Taksit Sayısı'), findsNothing);
     expect(find.text('Peşin'), findsOneWidget);
     expect(find.text('Açık Hesap'), findsOneWidget);
 
@@ -87,7 +89,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Hesap veya Kredi Kartı'), findsOneWidget);
-    expect(find.text('Taksit Sayısı'), findsOneWidget);
+    expect(find.text('Taksit Sayısı'), findsNothing);
 
     await tester.tap(find.text('Açık Hesap'));
     await tester.pumpAndSettle();
@@ -98,6 +100,42 @@ void main() {
     );
     expect(find.text('Müşteri'), findsOneWidget);
     expect(find.text('Açık hesap müşterisi seçin'), findsOneWidget);
+    expect(find.text('Taksit Sayısı'), findsOneWidget);
+  });
+
+  testWidgets('shows monthly recurrence fields without installments', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          accountRepositoryProvider.overrideWithValue(
+            const _AccountRepository(),
+          ),
+          creditCardRepositoryProvider.overrideWithValue(
+            const _CreditCardRepository(),
+          ),
+          customerRepositoryProvider.overrideWithValue(
+            const _CustomerRepository(),
+          ),
+          transactionRepositoryProvider.overrideWithValue(
+            _TransactionRepository(),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const CreateManualExpensePage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Her Ay'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('recurring_occurrence_count')), findsOneWidget);
+    expect(find.text('Kaç Ay Tekrarlansın?'), findsOneWidget);
+    expect(find.text('Gider Planını Kaydet'), findsOneWidget);
     expect(find.text('Taksit Sayısı'), findsNothing);
   });
 }

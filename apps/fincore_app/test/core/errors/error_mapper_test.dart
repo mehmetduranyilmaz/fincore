@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:fincore_app/core/errors/error_mapper.dart';
+import 'package:fincore_app/features/transactions/domain/errors/receipt_scan_exception.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -28,5 +29,11 @@ void main() {
     final error = Exception('Unknown');
 
     expect(ErrorMapper.map(error), 'Beklenmeyen bir hata oluştu.');
+  });
+
+  test('preserves an actionable receipt scan error', () {
+    const error = ReceiptScanException('Fiş görseline erişilemedi.');
+
+    expect(ErrorMapper.map(error), 'Fiş görseline erişilemedi.');
   });
 }

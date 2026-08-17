@@ -10,6 +10,7 @@ import 'package:fincore_app/features/settings/domain/errors/backup_exception.dar
 import 'package:fincore_app/features/settings/domain/services/financial_backup_store.dart';
 import 'package:fincore_app/features/settings/data/services/backup_key_value_store.dart';
 import 'package:fincore_app/features/transactions/data/models/transaction_dto.dart';
+import 'package:fincore_app/features/transactions/data/models/recurring_expense_plan_dto.dart';
 
 final class SecureStorageFinancialBackupStore implements FinancialBackupStore {
   const SecureStorageFinancialBackupStore(this._storage);
@@ -23,8 +24,21 @@ final class SecureStorageFinancialBackupStore implements FinancialBackupStore {
   static const String creditCardStatementsKey = 'credit_card_statements_v1';
   static const String customersKey = 'customers_v1';
   static const String transactionsKey = 'transactions_v1';
+  static const String recurringExpensePlansKey = 'recurring_expense_plans_v1';
 
   static const Set<String> financialKeys = {
+    accountsKey,
+    budgetsKey,
+    categoriesKey,
+    categoryDefaultsVersionKey,
+    creditCardsKey,
+    creditCardStatementsKey,
+    customersKey,
+    transactionsKey,
+    recurringExpensePlansKey,
+  };
+
+  static const Set<String> _requiredKeys = {
     accountsKey,
     budgetsKey,
     categoriesKey,
@@ -45,9 +59,10 @@ final class SecureStorageFinancialBackupStore implements FinancialBackupStore {
   @override
   Future<void> replaceFinancialData(Map<String, String?> data) async {
     _validate(data);
+    final normalized = {for (final key in financialKeys) key: data[key]};
     final previous = await readFinancialData();
     try {
-      await _writeAll(data);
+      await _writeAll(normalized);
     } on Object {
       try {
         await _writeAll(previous);
@@ -75,7 +90,7 @@ final class SecureStorageFinancialBackupStore implements FinancialBackupStore {
 
   static void _validate(Map<String, String?> data) {
     if (data.keys.toSet().difference(financialKeys).isNotEmpty ||
-        financialKeys.difference(data.keys.toSet()).isNotEmpty) {
+        _requiredKeys.difference(data.keys.toSet()).isNotEmpty) {
       throw const BackupException('Yedek veri kapsamı geçersiz.');
     }
     try {
@@ -89,6 +104,10 @@ final class SecureStorageFinancialBackupStore implements FinancialBackupStore {
       );
       _validateList(data[customersKey], CustomerDto.fromJson);
       _validateList(data[transactionsKey], TransactionDto.fromJson);
+      _validateList(
+        data[recurringExpensePlansKey],
+        RecurringExpensePlanDto.fromJson,
+      );
       final defaultsVersion = data[categoryDefaultsVersionKey];
       if (defaultsVersion != null && int.tryParse(defaultsVersion) == null) {
         throw const FormatException('Invalid defaults version.');

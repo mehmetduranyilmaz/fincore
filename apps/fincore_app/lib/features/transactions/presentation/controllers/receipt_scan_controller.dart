@@ -1,3 +1,5 @@
+import 'dart:developer' as developer;
+
 import 'package:fincore_app/core/di/providers.dart';
 import 'package:fincore_app/core/errors/error_mapper.dart';
 import 'package:fincore_app/features/transactions/domain/entities/receipt_scan_draft.dart';
@@ -48,7 +50,13 @@ final class ReceiptScanController extends Notifier<ReceiptScanState> {
       state = draft == null
           ? const ReceiptScanState.initial()
           : ReceiptScanState.review(draft);
-    } on Object catch (error) {
+    } on Object catch (error, stackTrace) {
+      developer.log(
+        'Receipt scanning failed.',
+        name: 'fincore.receipt_scan',
+        error: error,
+        stackTrace: stackTrace,
+      );
       state = ReceiptScanState.failure(ErrorMapper.map(error));
     }
   }

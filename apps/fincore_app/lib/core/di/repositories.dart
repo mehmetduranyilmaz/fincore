@@ -27,7 +27,9 @@ import 'package:fincore_app/features/customers/domain/repositories/customer_usag
 import 'package:fincore_app/features/transactions/data/repositories/transaction_repository_impl.dart';
 import 'package:fincore_app/features/transactions/data/repositories/transaction_reference_usage_repository_impl.dart';
 import 'package:fincore_app/features/transactions/data/repositories/installment_transaction_repository_impl.dart';
+import 'package:fincore_app/features/transactions/data/repositories/recurring_expense_plan_repository_impl.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/installment_transaction_repository.dart';
+import 'package:fincore_app/features/transactions/domain/repositories/recurring_expense_plan_repository.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_deletion_repository.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -125,6 +127,14 @@ installmentTransactionRepositoryProvider =
     Provider<InstallmentTransactionRepository>(
       (ref) => InstallmentTransactionRepositoryImpl(
         ref.watch(installmentTransactionDataSourceProvider),
+      ),
+    );
+
+final Provider<RecurringExpensePlanRepository>
+recurringExpensePlanRepositoryProvider =
+    Provider<RecurringExpensePlanRepository>(
+      (ref) => RecurringExpensePlanRepositoryImpl(
+        ref.watch(recurringExpensePlanDataSourceProvider),
       ),
     );
 

@@ -27,6 +27,8 @@ abstract final class AccountStrings {
   static const String type = 'Hesap Türü';
   static const String currency = 'Para Birimi';
   static const String openingBalance = 'Başlangıç Bakiyesi';
+  static const String openingBalanceCorrectionHint =
+      'Başlangıç bakiyesi düzeltildiğinde güncel bakiye otomatik olarak yeniden hesaplanır.';
   static const String bank = 'Banka';
   static const String selectBank = 'Bir banka seçin';
   static const String iban = 'IBAN (İsteğe Bağlı)';

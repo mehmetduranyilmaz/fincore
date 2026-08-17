@@ -1,22 +1,49 @@
 import 'package:fincore_app/core/formatters/app_formatters.dart';
 import 'package:fincore_app/core/theme/app_spacing.dart';
+import 'package:fincore_app/core/reporting/pdf_report_actions.dart';
+import 'package:fincore_app/app/router/app_routes.dart';
 import 'package:fincore_app/core/widgets/app_card.dart';
 import 'package:fincore_app/core/widgets/app_empty_state.dart';
 import 'package:fincore_app/core/widgets/app_loading_view.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_payment_calendar.dart';
 import 'package:fincore_app/features/credit_cards/presentation/constants/credit_card_strings.dart';
 import 'package:fincore_app/features/credit_cards/presentation/providers/credit_card_payment_calendar_provider.dart';
+import 'package:fincore_app/features/reports/presentation/financial_report_factories.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-final class CreditCardPaymentCalendarPage extends ConsumerWidget {
+final class CreditCardPaymentCalendarPage extends ConsumerStatefulWidget {
   const CreditCardPaymentCalendarPage({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CreditCardPaymentCalendarPage> createState() =>
+      _CreditCardPaymentCalendarPageState();
+}
+
+final class _CreditCardPaymentCalendarPageState
+    extends ConsumerState<CreditCardPaymentCalendarPage> {
+  bool _showMonths = true;
+
+  @override
+  Widget build(BuildContext context) {
     final calendar = ref.watch(creditCardPaymentCalendarProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text(CreditCardStrings.paymentCalendar)),
+      appBar: AppBar(
+        title: const Text(CreditCardStrings.paymentCalendar),
+        actions: [
+          IconButton(
+            tooltip: 'Tekrarlayan Giderler',
+            onPressed: () => context.push(AppRoutes.recurringExpenses),
+            icon: const Icon(Icons.event_repeat_outlined),
+          ),
+          PdfReportActions(
+            report: calendar.value?.isEmpty == false
+                ? FinancialReportFactories.paymentCalendar(calendar.value!)
+                : null,
+          ),
+        ],
+      ),
       body: calendar.when(
         loading: () => const AppLoadingView(),
         error: (error, stackTrace) =>
@@ -33,14 +60,37 @@ final class CreditCardPaymentCalendarPage extends ConsumerWidget {
                     constraints: const BoxConstraints(maxWidth: 760),
                     child: ListView.separated(
                       padding: const EdgeInsets.all(AppSpacing.lg),
-                      itemCount: value.years.length + 1,
+                      itemCount: value.years.length + 2,
                       separatorBuilder: (context, index) =>
                           const SizedBox(height: AppSpacing.md),
                       itemBuilder: (context, index) {
                         if (index == 0) {
                           return const _CalendarExplanation();
                         }
-                        return _PaymentYearCard(year: value.years[index - 1]);
+                        if (index == 1) {
+                          return Align(
+                            alignment: Alignment.centerRight,
+                            child: OutlinedButton.icon(
+                              key: const Key('payment_calendar_toggle_months'),
+                              onPressed: () =>
+                                  setState(() => _showMonths = !_showMonths),
+                              icon: Icon(
+                                _showMonths
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                              ),
+                              label: Text(
+                                _showMonths
+                                    ? CreditCardStrings.hideMonths
+                                    : CreditCardStrings.showMonths,
+                              ),
+                            ),
+                          );
+                        }
+                        return _PaymentYearCard(
+                          year: value.years[index - 2],
+                          showMonths: _showMonths,
+                        );
                       },
                     ),
                   ),
@@ -71,9 +121,10 @@ final class _CalendarExplanation extends StatelessWidget {
 }
 
 final class _PaymentYearCard extends StatelessWidget {
-  const _PaymentYearCard({required this.year});
+  const _PaymentYearCard({required this.year, required this.showMonths});
 
   final CreditCardPaymentYear year;
+  final bool showMonths;
 
   @override
   Widget build(BuildContext context) {
@@ -83,14 +134,18 @@ final class _PaymentYearCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            year.year.toString(),
-            style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          for (final month in year.months) ...[
-            _PaymentMonthRow(month: month),
-            const Divider(height: AppSpacing.md),
+          if (showMonths) ...[
+            Text(
+              year.year.toString(),
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            for (final month in year.months) ...[
+              _PaymentMonthRow(month: month),
+              const Divider(height: AppSpacing.md),
+            ],
           ],
           DecoratedBox(
             decoration: BoxDecoration(
@@ -103,7 +158,7 @@ final class _PaymentYearCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      CreditCardStrings.yearTotal,
+                      CreditCardStrings.yearTotal(year.year),
                       style: textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -150,7 +205,8 @@ final class _PaymentMonthRow extends StatelessWidget {
                 ),
                 Text(
                   CreditCardStrings.scheduledTransactionCount(
-                    month.transactionCount,
+                    confirmedCount: month.confirmedTransactionCount,
+                    plannedCount: month.plannedExpenseCount,
                   ),
                 ),
               ],

@@ -9,6 +9,9 @@ abstract final class AppRoutes {
   static const String createManualIncome = '/transactions/manual-income';
   static const String createTransfer = '/transactions/transfer';
   static const String createReceiptExpense = '/transactions/receipt-expense';
+  static const String recurringExpenses = '/transactions/recurring-expenses';
+  static const String editRecurringExpense =
+      '/transactions/recurring-expenses/:planId/edit';
   static const String transactionDetails = '/transactions/:transactionId';
   static const String editTransaction = '/transactions/:transactionId/edit';
   static const String convertTransactionInstallments =
@@ -40,6 +43,10 @@ abstract final class AppRoutes {
 
   static String transactionDetailsLocation(String transactionId) {
     return '/transactions/${Uri.encodeComponent(transactionId)}';
+  }
+
+  static String editRecurringExpenseLocation(String planId) {
+    return '/transactions/recurring-expenses/${Uri.encodeComponent(planId)}/edit';
   }
 
   static String editTransactionLocation(String transactionId) {

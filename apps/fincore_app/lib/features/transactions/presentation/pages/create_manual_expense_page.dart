@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:fincore_app/app/router/app_routes.dart';
 import 'package:fincore_app/core/formatters/app_formatters.dart';
 import 'package:fincore_app/core/formatters/turkish_decimal_input_formatter.dart';
 import 'package:fincore_app/core/theme/app_spacing.dart';
@@ -13,6 +14,7 @@ import 'package:fincore_app/features/categories/domain/entities/category_type.da
 import 'package:fincore_app/features/categories/presentation/controllers/categories_controller.dart';
 import 'package:fincore_app/features/categories/presentation/widgets/category_selector.dart';
 import 'package:fincore_app/features/transactions/domain/entities/create_manual_expense_input.dart';
+import 'package:fincore_app/features/transactions/domain/entities/create_recurring_expense_plan_input.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/installment_calculator.dart';
 import 'package:fincore_app/features/transactions/presentation/constants/transaction_strings.dart';
 import 'package:fincore_app/features/transactions/presentation/controllers/create_expense_controller.dart';
@@ -24,6 +26,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 enum _ExpensePaymentStatus { cash, openAccount }
+
+enum _ExpensePlanType { oneTime, recurringMonthly }
 
 final class CreateManualExpensePage extends ConsumerStatefulWidget {
   const CreateManualExpensePage({super.key});
@@ -38,11 +42,14 @@ final class _CreateManualExpensePageState
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _occurrenceCountController =
+      TextEditingController(text: '12');
 
   late DateTime _transactionDate;
   ExpenseSourceSelection? _source;
   String? _categoryId;
   _ExpensePaymentStatus _paymentStatus = _ExpensePaymentStatus.cash;
+  _ExpensePlanType _planType = _ExpensePlanType.oneTime;
   double _totalAmount = 0;
   List<double> _installmentAmounts = const [];
   String? _installmentError;
@@ -64,6 +71,7 @@ final class _CreateManualExpensePageState
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
+    _occurrenceCountController.dispose();
     super.dispose();
   }
 
@@ -87,7 +95,16 @@ final class _CreateManualExpensePageState
     });
 
     return Scaffold(
-      appBar: AppBar(title: const Text(TransactionStrings.createManualExpense)),
+      appBar: AppBar(
+        title: const Text(TransactionStrings.createManualExpense),
+        actions: [
+          IconButton(
+            tooltip: TransactionStrings.manageRecurringExpenses,
+            onPressed: () => context.push(AppRoutes.recurringExpenses),
+            icon: const Icon(Icons.event_repeat_outlined),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -133,10 +150,83 @@ final class _CreateManualExpensePageState
                             : null,
                       ),
                       const SizedBox(height: AppSpacing.md),
+                      Text(
+                        TransactionStrings.expensePlanType,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                      const SizedBox(height: AppSpacing.sm),
+                      SegmentedButton<_ExpensePlanType>(
+                        key: const Key('expense_plan_type'),
+                        segments: const [
+                          ButtonSegment(
+                            value: _ExpensePlanType.oneTime,
+                            label: Text(TransactionStrings.oneTimeExpense),
+                            icon: Icon(Icons.looks_one_outlined),
+                          ),
+                          ButtonSegment(
+                            value: _ExpensePlanType.recurringMonthly,
+                            label: Text(
+                              TransactionStrings.recurringMonthlyExpense,
+                            ),
+                            icon: Icon(Icons.event_repeat_outlined),
+                          ),
+                        ],
+                        selected: {_planType},
+                        onSelectionChanged: (selection) {
+                          setState(() {
+                            _planType = selection.single;
+                            _installmentAmounts = const [];
+                            _installmentError = null;
+                            final today = DateTime.now();
+                            final currentMonthStart = DateTime(
+                              today.year,
+                              today.month,
+                            );
+                            if (_planType ==
+                                    _ExpensePlanType.recurringMonthly &&
+                                _transactionDate.isBefore(currentMonthStart)) {
+                              _transactionDate = currentMonthStart;
+                            }
+                          });
+                        },
+                      ),
+                      const SizedBox(height: AppSpacing.md),
                       ExpenseDateField(
                         value: _transactionDate,
                         onTap: _selectDate,
                       ),
+                      if (_planType == _ExpensePlanType.recurringMonthly) ...[
+                        const SizedBox(height: AppSpacing.md),
+                        AppTextField(
+                          key: const Key('recurring_occurrence_count'),
+                          controller: _occurrenceCountController,
+                          label: TransactionStrings.occurrenceCount,
+                          keyboardType: TextInputType.number,
+                          validator: (value) {
+                            final count = int.tryParse(value?.trim() ?? '');
+                            return count == null || count < 2 || count > 60
+                                ? TransactionStrings.invalidOccurrenceCount
+                                : null;
+                          },
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 18,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
+                            const Expanded(
+                              child: Text(
+                                TransactionStrings.recurringExpenseHint,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       Text(
                         TransactionStrings.paymentStatus,
@@ -180,18 +270,17 @@ final class _CreateManualExpensePageState
                             });
                           },
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        InstallmentPlanEditor(
-                          totalAmount: _totalAmount,
-                          initialCount: 1,
-                          onChanged: (amounts) {
-                            _installmentAmounts = amounts;
-                            if (_installmentError != null && mounted) {
-                              setState(() => _installmentError = null);
-                            }
-                          },
-                        ),
-                      ] else
+                        if (_planType == _ExpensePlanType.oneTime &&
+                            _source?.creditCardId != null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          InstallmentPlanEditor(
+                            key: ValueKey('card_${_source!.creditCardId}'),
+                            totalAmount: _totalAmount,
+                            initialCount: 1,
+                            onChanged: _installmentsChanged,
+                          ),
+                        ],
+                      ] else ...[
                         ExpenseSourceSelector(
                           key: const Key('open_account_customer_selector'),
                           accounts: const [],
@@ -203,6 +292,16 @@ final class _CreateManualExpensePageState
                           onChanged: (selection) =>
                               setState(() => _source = selection),
                         ),
+                        if (_planType == _ExpensePlanType.oneTime) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          InstallmentPlanEditor(
+                            key: ValueKey('customer_${_source?.customerId}'),
+                            totalAmount: _totalAmount,
+                            initialCount: 1,
+                            onChanged: _installmentsChanged,
+                          ),
+                        ],
+                      ],
                       if (_installmentError case final message?) ...[
                         const SizedBox(height: AppSpacing.sm),
                         Text(
@@ -232,7 +331,9 @@ final class _CreateManualExpensePageState
                       ],
                       const SizedBox(height: AppSpacing.lg),
                       AppButton(
-                        label: TransactionStrings.saveExpense,
+                        label: _planType == _ExpensePlanType.recurringMonthly
+                            ? TransactionStrings.saveRecurringExpense
+                            : TransactionStrings.saveExpense,
                         isLoading:
                             createState.status == CreateExpenseStatus.loading,
                         onPressed: _submit,
@@ -276,11 +377,14 @@ final class _CreateManualExpensePageState
 
   Future<void> _selectDate() async {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final currentMonthStart = DateTime(now.year, now.month);
+    final isRecurring = _planType == _ExpensePlanType.recurringMonthly;
     final selectedDate = await showDatePicker(
       context: context,
       initialDate: _transactionDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(now.year, now.month, now.day),
+      firstDate: isRecurring ? currentMonthStart : DateTime(2000),
+      lastDate: isRecurring ? DateTime(now.year + 10, 12, 31) : today,
     );
 
     if (selectedDate != null && mounted) {
@@ -296,15 +400,32 @@ final class _CreateManualExpensePageState
     final amount = _parseAmount(_amountController.text)!;
     final description = _descriptionController.text.trim();
     final source = _source!;
-    final installmentAmounts =
-        _paymentStatus == _ExpensePaymentStatus.openAccount ||
-            _installmentAmounts.length <= 1
+    if (_planType == _ExpensePlanType.recurringMonthly) {
+      await ref
+          .read(createExpenseControllerProvider.notifier)
+          .createRecurring(
+            CreateRecurringExpensePlanInput(
+              accountId: source.accountId,
+              creditCardId: source.creditCardId,
+              customerId: source.customerId,
+              amount: amount,
+              description: description,
+              categoryId: _categoryId,
+              firstDueDate: _transactionDate,
+              occurrenceCount: int.parse(_occurrenceCountController.text),
+            ),
+          );
+      return;
+    }
+    final installmentAmounts = _installmentAmounts.length <= 1
         ? [amount]
         : _installmentAmounts;
 
-    if (installmentAmounts.length > 1 && source.creditCardId == null) {
+    if (installmentAmounts.length > 1 &&
+        source.creditCardId == null &&
+        source.customerId == null) {
       setState(() {
-        _installmentError = TransactionStrings.installmentCardRequired;
+        _installmentError = TransactionStrings.installmentSourceRequired;
       });
       return;
     }
@@ -338,5 +459,12 @@ final class _CreateManualExpensePageState
   double? _parseAmount(String value) {
     final amount = AppFormatters.tryParseDecimal(value);
     return amount != null && amount > 0 ? amount : null;
+  }
+
+  void _installmentsChanged(List<double> amounts) {
+    _installmentAmounts = amounts;
+    if (_installmentError != null && mounted) {
+      setState(() => _installmentError = null);
+    }
   }
 }

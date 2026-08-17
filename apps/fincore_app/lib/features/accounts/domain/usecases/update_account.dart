@@ -67,12 +67,10 @@ final class UpdateAccountUseCase {
     );
     final structuralChange =
         existing.type != input.type ||
-        existing.currencyCode != input.currencyCode ||
-        (existing.openingBalance * 100).round() !=
-            (input.openingBalance * 100).round();
+        existing.currencyCode != input.currencyCode;
     if (transactions.isNotEmpty && structuralChange) {
       throw const AccountOperationException(
-        'Hareketi bulunan hesabın türü, para birimi veya başlangıç bakiyesi değiştirilemez.',
+        'Hareketi bulunan hesabın türü veya para birimi değiştirilemez.',
       );
     }
     final updated = existing.copyWith(

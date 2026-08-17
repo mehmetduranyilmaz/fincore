@@ -47,12 +47,15 @@ import 'package:fincore_app/features/customers/domain/usecases/get_customer_move
 import 'package:fincore_app/features/customers/domain/usecases/update_customer.dart';
 import 'package:fincore_app/features/customers/domain/usecases/update_customer_payment.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_manual_expense.dart';
+import 'package:fincore_app/features/transactions/domain/usecases/create_recurring_expense_plan.dart';
+import 'package:fincore_app/features/transactions/domain/usecases/delete_recurring_expense_plan.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_receipt_expense.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/convert_expense_to_installments.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_manual_income.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_transfer.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/delete_transaction.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/get_transactions.dart';
+import 'package:fincore_app/features/transactions/domain/usecases/update_recurring_expense_plan.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/get_transaction_details.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/update_transaction.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/parse_receipt_text.dart';
@@ -223,6 +226,9 @@ getCreditCardPaymentCalendarProvider =
       (ref) => GetCreditCardPaymentCalendarUseCase(
         ref.watch(creditCardRepositoryProvider),
         ref.watch(transactionRepositoryProvider),
+        recurringExpensePlanRepository: ref.watch(
+          recurringExpensePlanRepositoryProvider,
+        ),
       ),
     );
 
@@ -369,6 +375,38 @@ final Provider<CreateManualExpenseUseCase> createManualExpenseProvider =
         ),
         categoryValidator: ref.watch(transactionCategoryValidatorProvider),
         customerRepository: ref.watch(customerRepositoryProvider),
+      ),
+    );
+
+final Provider<CreateRecurringExpensePlanUseCase>
+createRecurringExpensePlanProvider =
+    Provider<CreateRecurringExpensePlanUseCase>(
+      (ref) => CreateRecurringExpensePlanUseCase(
+        ref.watch(recurringExpensePlanRepositoryProvider),
+        ref.watch(accountRepositoryProvider),
+        ref.watch(creditCardRepositoryProvider),
+        ref.watch(customerRepositoryProvider),
+        categoryValidator: ref.watch(transactionCategoryValidatorProvider),
+      ),
+    );
+
+final Provider<UpdateRecurringExpensePlanUseCase>
+updateRecurringExpensePlanProvider =
+    Provider<UpdateRecurringExpensePlanUseCase>(
+      (ref) => UpdateRecurringExpensePlanUseCase(
+        ref.watch(recurringExpensePlanRepositoryProvider),
+        ref.watch(accountRepositoryProvider),
+        ref.watch(creditCardRepositoryProvider),
+        ref.watch(customerRepositoryProvider),
+        categoryValidator: ref.watch(transactionCategoryValidatorProvider),
+      ),
+    );
+
+final Provider<DeleteRecurringExpensePlanUseCase>
+deleteRecurringExpensePlanProvider =
+    Provider<DeleteRecurringExpensePlanUseCase>(
+      (ref) => DeleteRecurringExpensePlanUseCase(
+        ref.watch(recurringExpensePlanRepositoryProvider),
       ),
     );
 

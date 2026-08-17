@@ -29,6 +29,8 @@ import 'package:fincore_app/features/transactions/presentation/pages/create_rece
 import 'package:fincore_app/features/transactions/presentation/pages/create_transfer_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/convert_installments_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/edit_transaction_page.dart';
+import 'package:fincore_app/features/transactions/presentation/pages/edit_recurring_expense_plan_page.dart';
+import 'package:fincore_app/features/transactions/presentation/pages/recurring_expense_plans_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/transaction_details_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -82,6 +84,16 @@ abstract final class AppRouter {
         GoRoute(
           path: AppRoutes.createReceiptExpense,
           builder: (context, state) => const CreateReceiptExpensePage(),
+        ),
+        GoRoute(
+          path: AppRoutes.recurringExpenses,
+          builder: (context, state) => const RecurringExpensePlansPage(),
+        ),
+        GoRoute(
+          path: AppRoutes.editRecurringExpense,
+          builder: (context, state) => EditRecurringExpensePlanPage(
+            planId: state.pathParameters['planId']!,
+          ),
         ),
         GoRoute(
           path: AppRoutes.transactionDetails,
