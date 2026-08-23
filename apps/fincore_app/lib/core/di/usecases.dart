@@ -48,6 +48,7 @@ import 'package:fincore_app/features/customers/domain/usecases/update_customer.d
 import 'package:fincore_app/features/customers/domain/usecases/update_customer_payment.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_manual_expense.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_recurring_expense_plan.dart';
+import 'package:fincore_app/features/transactions/domain/usecases/realize_due_recurring_expenses.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/delete_recurring_expense_plan.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_receipt_expense.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/convert_expense_to_installments.dart';
@@ -229,6 +230,8 @@ getCreditCardPaymentCalendarProvider =
         recurringExpensePlanRepository: ref.watch(
           recurringExpensePlanRepositoryProvider,
         ),
+        accountRepository: ref.watch(accountRepositoryProvider),
+        customerRepository: ref.watch(customerRepositoryProvider),
       ),
     );
 
@@ -387,6 +390,15 @@ createRecurringExpensePlanProvider =
         ref.watch(creditCardRepositoryProvider),
         ref.watch(customerRepositoryProvider),
         categoryValidator: ref.watch(transactionCategoryValidatorProvider),
+      ),
+    );
+
+final Provider<RealizeDueRecurringExpensesUseCase>
+realizeDueRecurringExpensesProvider =
+    Provider<RealizeDueRecurringExpensesUseCase>(
+      (ref) => RealizeDueRecurringExpensesUseCase(
+        ref.watch(recurringExpensePlanRepositoryProvider),
+        ref.watch(transactionRepositoryProvider),
       ),
     );
 

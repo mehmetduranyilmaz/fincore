@@ -1,1 +1,1 @@
-enum TransactionSource { manual, receiptScan, import }
+enum TransactionSource { manual, receiptScan, import, recurringPlan }

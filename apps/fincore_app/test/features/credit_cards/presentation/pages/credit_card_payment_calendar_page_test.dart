@@ -36,7 +36,21 @@ void main() {
     expect(find.text('2025 Yılı Toplamı'), findsOneWidget);
     expect(find.text('2026 Yılı Toplamı'), findsOneWidget);
     expect(find.text('600,00 ₺'), findsOneWidget);
-    expect(find.text('1 kesinleşmiş • 1 planlanan'), findsOneWidget);
+    expect(find.text('1 kesinleşmiş • 1 planlanan'), findsNWidgets(2));
+    expect(find.text('Müşteri • Mehmet Eğitim'), findsOneWidget);
+    expect(find.text('Kredi Kartı • Akbank Axess • ****0349'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('payment_calendar_toggle_details')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detayları Göster'), findsOneWidget);
+    expect(find.text('Müşteri • Mehmet Eğitim'), findsNothing);
+
+    await tester.tap(find.byKey(const Key('payment_calendar_toggle_details')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Detayları Gizle'), findsOneWidget);
+    expect(find.text('Müşteri • Mehmet Eğitim'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('payment_calendar_toggle_months')));
     await tester.pumpAndSettle();
@@ -46,6 +60,15 @@ void main() {
     expect(find.text('2026-01'), findsNothing);
     expect(find.text('2025 Yılı Toplamı'), findsOneWidget);
     expect(find.text('2026 Yılı Toplamı'), findsOneWidget);
+    expect(find.text('Müşteri • Mehmet Eğitim'), findsNothing);
+    expect(
+      tester
+          .widget<OutlinedButton>(
+            find.byKey(const Key('payment_calendar_toggle_details')),
+          )
+          .onPressed,
+      isNull,
+    );
 
     await tester.tap(find.byKey(const Key('payment_calendar_toggle_months')));
     await tester.pumpAndSettle();
@@ -53,6 +76,13 @@ void main() {
     expect(find.text('Ayları Gizle'), findsOneWidget);
     expect(find.text('2025-10'), findsOneWidget);
     expect(find.text('2026-01'), findsOneWidget);
+    expect(find.text('Müşteri • Mehmet Eğitim'), findsNothing);
+    expect(find.text('Detayları Göster'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('payment_calendar_toggle_details')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Müşteri • Mehmet Eğitim'), findsOneWidget);
   });
 }
 
@@ -65,6 +95,15 @@ final _calendar = CreditCardPaymentCalendar([
         month: 10,
         totalsByCurrency: const {'TRY': 100},
         transactionCount: 1,
+        details: [
+          CreditCardPaymentDetail(
+            sourceId: 'customer-1',
+            kind: CreditCardPaymentDetailKind.customer,
+            label: 'Müşteri • Mehmet Eğitim',
+            totalsByCurrency: const {'TRY': 100},
+            transactionCount: 1,
+          ),
+        ],
       ),
       CreditCardPaymentMonth(
         year: 2025,
@@ -72,6 +111,16 @@ final _calendar = CreditCardPaymentCalendar([
         totalsByCurrency: const {'TRY': 200},
         transactionCount: 2,
         plannedExpenseCount: 1,
+        details: [
+          CreditCardPaymentDetail(
+            sourceId: 'card-1',
+            kind: CreditCardPaymentDetailKind.creditCard,
+            label: 'Kredi Kartı • Akbank Axess • ****0349',
+            totalsByCurrency: const {'TRY': 200},
+            transactionCount: 2,
+            plannedExpenseCount: 1,
+          ),
+        ],
       ),
       CreditCardPaymentMonth(
         year: 2025,

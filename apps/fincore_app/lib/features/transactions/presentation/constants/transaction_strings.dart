@@ -110,6 +110,7 @@ abstract final class TransactionStrings {
   static const String manual = 'Manuel';
   static const String receiptScan = 'Fiş Tarama';
   static const String imported = 'İçe Aktarma';
+  static const String recurringPlan = 'Tekrarlayan Plan';
 
   static String installmentLabel(int number, int count) {
     return '$number/$count';
@@ -137,6 +138,7 @@ abstract final class TransactionStrings {
       TransactionSource.manual => manual,
       TransactionSource.receiptScan => receiptScan,
       TransactionSource.import => imported,
+      TransactionSource.recurringPlan => recurringPlan,
     };
   }
 

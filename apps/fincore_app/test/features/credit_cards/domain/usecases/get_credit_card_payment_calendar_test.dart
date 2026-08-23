@@ -1,6 +1,12 @@
+import 'package:fincore_app/features/accounts/domain/entities/account.dart';
+import 'package:fincore_app/features/accounts/domain/entities/account_type.dart';
+import 'package:fincore_app/features/accounts/domain/repositories/account_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_payment_calendar.dart';
+import 'package:fincore_app/features/customers/domain/entities/customer.dart';
+import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
+import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_occurrence.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_plan.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
@@ -32,6 +38,8 @@ void main() {
       recurringExpensePlanRepository: _RecurringExpensePlanRepository([
         _aidatPlan,
       ]),
+      accountRepository: const _AccountRepository(),
+      customerRepository: const _CustomerRepository(),
       clock: () => DateTime(2025, 10, 8),
     );
 
@@ -49,6 +57,11 @@ void main() {
     expect(year2025.months[1].totalsByCurrency, {'TRY': 90});
     expect(year2025.months[1].confirmedTransactionCount, 1);
     expect(year2025.months[1].plannedExpenseCount, 1);
+    expect(year2025.months.first.details, hasLength(2));
+    expect(
+      year2025.months[1].details.map((detail) => detail.label),
+      containsAll(['Kredi Kartı • Akbank Axess • ****0349', 'Hesap • TL Kasa']),
+    );
     expect(year2025.totalsByCurrency, {'TRY': 255, 'USD': 20});
     expect(calendar.years.last.months.single.periodLabel, '2026-01');
     expect(calendar.years.last.totalsByCurrency, {'TRY': 50});
@@ -76,7 +89,108 @@ void main() {
     final month = calendar.years.single.months.single;
     expect(month.totalsByCurrency, {'TRY': 22750});
     expect(month.transactionCount, 1);
+    expect(month.details.single.label, 'Kredi Kartı • Akbank Axess • ****0349');
   });
+
+  test(
+    'shows a realized customer plan once as confirmed and future as planned',
+    () async {
+      final plan = RecurringExpensePlan(
+        id: 'customer-plan',
+        accountId: null,
+        creditCardId: null,
+        customerId: 'customer-1',
+        amount: 500,
+        description: 'Eğitim gideri',
+        categoryId: 'education',
+        currencyCode: 'TRY',
+        firstDueDate: DateTime(2025, 10, 5),
+        occurrenceCount: 2,
+      );
+      final realizedId = RecurringExpenseOccurrence.transactionId(
+        planId: plan.id,
+        dueDate: DateTime(2025, 10, 5),
+      );
+      final useCase = GetCreditCardPaymentCalendarUseCase(
+        const _CreditCardRepository(),
+        _TransactionRepository([
+          Transaction(
+            id: realizedId,
+            accountId: null,
+            creditCardId: null,
+            amount: 500,
+            transactionType: TransactionType.expense,
+            categoryId: 'education',
+            merchant: 'Eğitim gideri',
+            note: null,
+            transactionDate: DateTime(2025, 10, 5),
+            source: TransactionSource.recurringPlan,
+            isDeleted: false,
+            customerId: 'customer-1',
+            customerBalanceDelta: -500,
+          ),
+        ]),
+        recurringExpensePlanRepository: _RecurringExpensePlanRepository([plan]),
+        customerRepository: const _CustomerRepository(),
+        clock: () => DateTime(2025, 10, 8),
+      );
+
+      final calendar = await useCase.execute();
+      final october = calendar.years.single.months.first;
+      final november = calendar.years.single.months.last;
+
+      expect(october.totalsByCurrency, {'TRY': 500});
+      expect(october.confirmedTransactionCount, 1);
+      expect(october.plannedExpenseCount, 0);
+      expect(october.details.single.label, 'Müşteri • Mehmet Eğitim');
+      expect(october.details.single.confirmedTransactionCount, 1);
+      expect(november.plannedExpenseCount, 1);
+      expect(november.details.single.plannedExpenseCount, 1);
+    },
+  );
+}
+
+final class _AccountRepository implements AccountRepository {
+  const _AccountRepository();
+
+  @override
+  Future<List<Account>> getAccounts() async => const [
+    Account(
+      id: 'account-1',
+      name: 'TL Kasa',
+      type: AccountType.cash,
+      currencyCode: 'TRY',
+      isArchived: false,
+    ),
+  ];
+}
+
+final class _CustomerRepository implements CustomerRepository {
+  const _CustomerRepository();
+
+  static const customer = Customer(
+    id: 'customer-1',
+    name: 'Mehmet Eğitim',
+    openingBalance: -3000,
+    currencyCode: 'TRY',
+    isArchived: false,
+  );
+
+  @override
+  Future<void> archive(String customerId) async {}
+
+  @override
+  Future<void> create(Customer customer) async {}
+
+  @override
+  Future<Customer?> getById(String customerId) async =>
+      customerId == customer.id ? customer : null;
+
+  @override
+  Future<List<Customer>> getCustomers() async => const [customer];
+
+  @override
+  Future<void> update(Customer customer) async {}
 }
 
 final _aidatPlan = RecurringExpensePlan(

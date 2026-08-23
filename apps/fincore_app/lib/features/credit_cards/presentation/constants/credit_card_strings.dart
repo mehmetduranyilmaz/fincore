@@ -66,13 +66,16 @@ abstract final class CreditCardStrings {
   static const String paymentCalendar = 'Aylık Ödeme Takvimi';
   static const String paymentCalendarHint =
       'Kredi kartı ödemeleri ve tekrarlayan gider planları aylara göre '
-      'gösterilir. Planlanan giderler vadesinden önce gerçek bakiyeleri '
-      'etkilemez. Farklı para birimleri birbirine eklenmez.';
+      'gösterilir. Vadesi gelen plan gerçek harekete ve ilgili bakiyeye '
+      'yansır; gelecek vadeler planlanan olarak kalır. Farklı para birimleri '
+      'birbirine eklenmez.';
   static const String hideMonths = 'Ayları Gizle';
   static const String showMonths = 'Ayları Göster';
+  static const String hideDetails = 'Detayları Gizle';
+  static const String showDetails = 'Detayları Göster';
   static const String noScheduledPayments = 'Planlanmış ödeme yok';
   static const String noScheduledPaymentsDescription =
-      'Bu ay veya sonraki aylara ait kredi kartı harcaması bulunmuyor.';
+      'Bu ay veya sonraki aylara ait ödeme ya da gider planı bulunmuyor.';
   static const String paymentCalendarUnableToLoad =
       'Ödeme takvimi yüklenemedi.';
 

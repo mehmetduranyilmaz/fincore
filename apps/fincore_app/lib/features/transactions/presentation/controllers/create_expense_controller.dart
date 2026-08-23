@@ -5,6 +5,7 @@ import 'package:fincore_app/features/transactions/domain/entities/create_manual_
 import 'package:fincore_app/features/transactions/domain/entities/create_recurring_expense_plan_input.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_manual_expense.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_recurring_expense_plan.dart';
+import 'package:fincore_app/features/transactions/domain/usecases/realize_due_recurring_expenses.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 enum CreateExpenseStatus { initial, loading, success, failure }
@@ -36,11 +37,15 @@ final createExpenseControllerProvider =
 final class CreateExpenseController extends Notifier<CreateExpenseState> {
   late CreateManualExpenseUseCase _createManualExpense;
   late CreateRecurringExpensePlanUseCase _createRecurringExpensePlan;
+  late RealizeDueRecurringExpensesUseCase _realizeDueRecurringExpenses;
 
   @override
   CreateExpenseState build() {
     _createManualExpense = ref.watch(createManualExpenseProvider);
     _createRecurringExpensePlan = ref.watch(createRecurringExpensePlanProvider);
+    _realizeDueRecurringExpenses = ref.watch(
+      realizeDueRecurringExpensesProvider,
+    );
     return const CreateExpenseState.initial();
   }
 
@@ -48,6 +53,12 @@ final class CreateExpenseController extends Notifier<CreateExpenseState> {
     state = const CreateExpenseState.loading();
     try {
       await _createRecurringExpensePlan.execute(input);
+      final realized = await _realizeDueRecurringExpenses.execute();
+      if (realized.isNotEmpty) {
+        await ref
+            .read(appDataRefreshCoordinatorProvider)
+            .transactionsChanged(current: realized);
+      }
       ref.read(appDataRefreshCoordinatorProvider).recurringExpensePlanChanged();
       state = const CreateExpenseState.success();
     } on Object catch (error) {

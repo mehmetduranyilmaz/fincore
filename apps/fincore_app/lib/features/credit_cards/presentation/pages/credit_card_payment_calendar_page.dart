@@ -24,6 +24,7 @@ final class CreditCardPaymentCalendarPage extends ConsumerStatefulWidget {
 final class _CreditCardPaymentCalendarPageState
     extends ConsumerState<CreditCardPaymentCalendarPage> {
   bool _showMonths = true;
+  bool _showDetails = true;
 
   @override
   Widget build(BuildContext context) {
@@ -68,28 +69,61 @@ final class _CreditCardPaymentCalendarPageState
                           return const _CalendarExplanation();
                         }
                         if (index == 1) {
-                          return Align(
-                            alignment: Alignment.centerRight,
-                            child: OutlinedButton.icon(
-                              key: const Key('payment_calendar_toggle_months'),
-                              onPressed: () =>
-                                  setState(() => _showMonths = !_showMonths),
-                              icon: Icon(
-                                _showMonths
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
+                          return Wrap(
+                            alignment: WrapAlignment.end,
+                            spacing: AppSpacing.sm,
+                            runSpacing: AppSpacing.sm,
+                            children: [
+                              OutlinedButton.icon(
+                                key: const Key(
+                                  'payment_calendar_toggle_months',
+                                ),
+                                onPressed: () => setState(() {
+                                  if (_showMonths) {
+                                    _showMonths = false;
+                                    _showDetails = false;
+                                  } else {
+                                    _showMonths = true;
+                                  }
+                                }),
+                                icon: Icon(
+                                  _showMonths
+                                      ? Icons.visibility_off_outlined
+                                      : Icons.visibility_outlined,
+                                ),
+                                label: Text(
+                                  _showMonths
+                                      ? CreditCardStrings.hideMonths
+                                      : CreditCardStrings.showMonths,
+                                ),
                               ),
-                              label: Text(
-                                _showMonths
-                                    ? CreditCardStrings.hideMonths
-                                    : CreditCardStrings.showMonths,
+                              OutlinedButton.icon(
+                                key: const Key(
+                                  'payment_calendar_toggle_details',
+                                ),
+                                onPressed: !_showMonths
+                                    ? null
+                                    : () => setState(
+                                        () => _showDetails = !_showDetails,
+                                      ),
+                                icon: Icon(
+                                  _showDetails
+                                      ? Icons.list_alt_outlined
+                                      : Icons.format_list_bulleted_outlined,
+                                ),
+                                label: Text(
+                                  _showDetails
+                                      ? CreditCardStrings.hideDetails
+                                      : CreditCardStrings.showDetails,
+                                ),
                               ),
-                            ),
+                            ],
                           );
                         }
                         return _PaymentYearCard(
                           year: value.years[index - 2],
                           showMonths: _showMonths,
+                          showDetails: _showDetails,
                         );
                       },
                     ),
@@ -121,10 +155,15 @@ final class _CalendarExplanation extends StatelessWidget {
 }
 
 final class _PaymentYearCard extends StatelessWidget {
-  const _PaymentYearCard({required this.year, required this.showMonths});
+  const _PaymentYearCard({
+    required this.year,
+    required this.showMonths,
+    required this.showDetails,
+  });
 
   final CreditCardPaymentYear year;
   final bool showMonths;
+  final bool showDetails;
 
   @override
   Widget build(BuildContext context) {
@@ -143,7 +182,7 @@ final class _PaymentYearCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
             for (final month in year.months) ...[
-              _PaymentMonthRow(month: month),
+              _PaymentMonthRow(month: month, showDetails: showDetails),
               const Divider(height: AppSpacing.md),
             ],
           ],
@@ -182,40 +221,117 @@ final class _PaymentYearCard extends StatelessWidget {
 }
 
 final class _PaymentMonthRow extends StatelessWidget {
-  const _PaymentMonthRow({required this.month});
+  const _PaymentMonthRow({required this.month, required this.showDetails});
 
   final CreditCardPaymentMonth month;
+  final bool showDetails;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  month.periodLabel,
-                  key: Key('payment_month_${month.periodLabel}'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      month.periodLabel,
+                      key: Key('payment_month_${month.periodLabel}'),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      CreditCardStrings.scheduledTransactionCount(
+                        confirmedCount: month.confirmedTransactionCount,
+                        plannedCount: month.plannedExpenseCount,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  CreditCardStrings.scheduledTransactionCount(
-                    confirmedCount: month.confirmedTransactionCount,
-                    plannedCount: month.plannedExpenseCount,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              _CurrencyTotals(totals: month.totalsByCurrency),
+            ],
           ),
-          _CurrencyTotals(totals: month.totalsByCurrency),
+          if (showDetails && month.details.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            for (final detail in month.details) ...[
+              _PaymentDetailRow(detail: detail),
+              if (detail != month.details.last)
+                const SizedBox(height: AppSpacing.xs),
+            ],
+          ],
         ],
       ),
     );
+  }
+}
+
+final class _PaymentDetailRow extends StatelessWidget {
+  const _PaymentDetailRow({required this.detail});
+
+  final CreditCardPaymentDetail detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerHighest.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.sm,
+          vertical: AppSpacing.sm,
+        ),
+        child: Row(
+          children: [
+            Icon(_detailIcon(detail.kind), size: 20, color: colors.primary),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    detail.label,
+                    key: Key(
+                      'payment_detail_${detail.kind.name}_${detail.sourceId}',
+                    ),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    CreditCardStrings.scheduledTransactionCount(
+                      confirmedCount: detail.confirmedTransactionCount,
+                      plannedCount: detail.plannedExpenseCount,
+                    ),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _CurrencyTotals(totals: detail.totalsByCurrency),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static IconData _detailIcon(CreditCardPaymentDetailKind kind) {
+    return switch (kind) {
+      CreditCardPaymentDetailKind.creditCard => Icons.credit_card_outlined,
+      CreditCardPaymentDetailKind.customer => Icons.person_outline,
+      CreditCardPaymentDetailKind.account =>
+        Icons.account_balance_wallet_outlined,
+    };
   }
 }
 

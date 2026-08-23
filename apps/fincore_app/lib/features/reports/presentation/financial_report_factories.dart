@@ -199,6 +199,14 @@ abstract final class FinancialReportFactories {
           month.plannedExpenseCount.toString(),
           _currencyTotals(month.totalsByCurrency),
         ]);
+        for (final detail in month.details) {
+          rows.add([
+            '  ${detail.label}',
+            detail.confirmedTransactionCount.toString(),
+            detail.plannedExpenseCount.toString(),
+            _currencyTotals(detail.totalsByCurrency),
+          ]);
+        }
       }
       rows.add([
         '${year.year} Yılı Toplamı',
@@ -242,7 +250,7 @@ abstract final class FinancialReportFactories {
       ],
       rows: rows,
       note:
-          'Planlanan giderler vadesinden önce gerçek hesap ve kart bakiyelerini etkilemez.',
+          'Vadesi gelen tekrarlayan giderler gerçek harekete dönüşür; gelecek vadeler planlanan olarak gösterilir.',
     );
   }
 

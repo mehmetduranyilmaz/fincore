@@ -5,6 +5,8 @@ import 'package:fincore_app/features/auth/data/datasources/auth_local_data_sourc
 import 'package:fincore_app/features/auth/domain/entities/auth_session.dart';
 import 'package:fincore_app/features/credit_cards/data/datasources/credit_card_mock_data_source.dart';
 import 'package:fincore_app/features/transactions/data/datasources/transaction_mock_data_source.dart';
+import 'package:fincore_app/features/transactions/data/datasources/recurring_expense_plan_local_data_source.dart';
+import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_plan.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,6 +46,9 @@ void main() {
           transactionDataSourceProvider.overrideWithValue(
             TransactionMockDataSource(),
           ),
+          recurringExpensePlanDataSourceProvider.overrideWithValue(
+            const _EmptyRecurringExpensePlanDataSource(),
+          ),
         ],
         child: const FincoreApp(),
       ),
@@ -74,6 +79,9 @@ void main() {
           ),
           transactionDataSourceProvider.overrideWithValue(
             TransactionMockDataSource(),
+          ),
+          recurringExpensePlanDataSourceProvider.overrideWithValue(
+            const _EmptyRecurringExpensePlanDataSource(),
           ),
         ],
         child: const FincoreApp(),
@@ -118,6 +126,23 @@ void main() {
     expect(find.text('Beklenmeyen bir hata oluştu.'), findsOneWidget);
     expect(find.text('Giriş Yap'), findsOneWidget);
   });
+}
+
+final class _EmptyRecurringExpensePlanDataSource
+    implements RecurringExpensePlanDataSource {
+  const _EmptyRecurringExpensePlanDataSource();
+
+  @override
+  Future<List<RecurringExpensePlan>> getPlans() async => const [];
+
+  @override
+  Future<void> insert(RecurringExpensePlan plan) async {}
+
+  @override
+  Future<void> remove(String planId) async {}
+
+  @override
+  Future<void> replace(RecurringExpensePlan plan) async {}
 }
 
 final class _UnauthenticatedLocalDataSource implements AuthLocalDataSource {
