@@ -40,6 +40,8 @@ abstract final class AppRoutes {
   static const String customerMovements = '/customers/:customerId/movements';
   static const String createAccount = '/accounts/create';
   static const String editAccount = '/accounts/:accountId/edit';
+  static const String accountMovements = '/accounts/:accountId/movements';
+  static const String cashFlow = '/reports/cash-flow';
 
   static String transactionDetailsLocation(String transactionId) {
     return '/transactions/${Uri.encodeComponent(transactionId)}';
@@ -115,5 +117,9 @@ abstract final class AppRoutes {
 
   static String editAccountLocation(String accountId) {
     return '/accounts/${Uri.encodeComponent(accountId)}/edit';
+  }
+
+  static String accountMovementsLocation(String accountId) {
+    return '/accounts/${Uri.encodeComponent(accountId)}/movements';
   }
 }

@@ -10,7 +10,7 @@ import 'package:fincore_app/features/transactions/domain/repositories/transactio
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('uses the upcoming statement cutoff, not the calendar month', () async {
+  test('includes installments later in the current month', () async {
     final useCase = GetCreditCardFutureInstallmentsUseCase(
       _TransactionRepository([
         _installment('telefon-1', 'Telefon', DateTime(2026, 8, 15), 1),
@@ -25,11 +25,12 @@ void main() {
     final result = await useCase.execute(_card);
 
     expect(result.map((item) => item.id), [
+      'telefon-1',
       'telefon-2',
       'telefon-3',
       'telefon-4',
     ]);
-    expect(result.fold<double>(0, (total, item) => total + item.amount), 3000);
+    expect(result.fold<double>(0, (total, item) => total + item.amount), 4000);
   });
 
   test('sorts by Turkish description then installment sequence', () async {
@@ -53,6 +54,48 @@ void main() {
       'telefon-4',
     ]);
   });
+
+  test(
+    'removes an installment only after a real statement assigns it',
+    () async {
+      final installment = _installment(
+        'september-installment',
+        'Telefon',
+        DateTime(2026, 9, 2),
+        2,
+      );
+      final statement = CreditCardStatement(
+        id: 'september-statement',
+        creditCardId: _card.id,
+        statementDate: DateTime(2026, 9, 30),
+        dueDate: DateTime(2026, 10, 10),
+        createdAt: DateTime(2026, 9, 30),
+        lines: [
+          CreditCardStatementLine(
+            transactionId: installment.id,
+            description: installment.merchant,
+            transactionDate: installment.transactionDate,
+            amount: installment.amount,
+            installmentNumber: installment.installmentNumber,
+            installmentCount: installment.installmentCount,
+          ),
+        ],
+      );
+      final beforeCut = GetCreditCardFutureInstallmentsUseCase(
+        _TransactionRepository([installment]),
+        const _StatementRepository(),
+        clock: () => DateTime(2026, 9, 30),
+      );
+      final afterCut = GetCreditCardFutureInstallmentsUseCase(
+        _TransactionRepository([installment]),
+        _StatementRepository([statement]),
+        clock: () => DateTime(2026, 9, 30),
+      );
+
+      expect((await beforeCut.execute(_card)).single.id, installment.id);
+      expect(await afterCut.execute(_card), isEmpty);
+    },
+  );
 
   test(
     'calculates the next expected cut date after the current cut passes',
@@ -104,7 +147,9 @@ Transaction _installment(
 );
 
 final class _StatementRepository implements CreditCardStatementRepository {
-  const _StatementRepository();
+  const _StatementRepository([this.items = const []]);
+
+  final List<CreditCardStatement> items;
 
   @override
   Future<void> create(CreditCardStatement statement) async {}
@@ -112,7 +157,7 @@ final class _StatementRepository implements CreditCardStatementRepository {
   @override
   Future<List<CreditCardStatement>> getByCreditCardId(
     String creditCardId,
-  ) async => const [];
+  ) async => items;
 }
 
 final class _TransactionRepository implements TransactionRepository {

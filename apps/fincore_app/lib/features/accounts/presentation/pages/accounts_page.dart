@@ -43,6 +43,8 @@ final class _AccountsPageState extends ConsumerState<AccountsPage> {
         onCreate: () => context.push(AppRoutes.createAccount),
         onEdit: (account) =>
             context.push(AppRoutes.editAccountLocation(account.id)),
+        onOpen: (account) =>
+            context.push(AppRoutes.accountMovementsLocation(account.id)),
         onDelete: _confirmDelete,
       ),
       AccountsStatus.failure => AppErrorView(
@@ -94,12 +96,14 @@ final class _AccountsContent extends StatelessWidget {
     required this.accounts,
     required this.onCreate,
     required this.onEdit,
+    required this.onOpen,
     required this.onDelete,
   });
 
   final List<Account> accounts;
   final VoidCallback onCreate;
   final ValueChanged<Account> onEdit;
+  final ValueChanged<Account> onOpen;
   final ValueChanged<Account> onDelete;
 
   @override
@@ -129,6 +133,7 @@ final class _AccountsContent extends StatelessWidget {
                 : AccountsList(
                     accounts: accounts,
                     onEdit: onEdit,
+                    onOpen: onOpen,
                     onDelete: onDelete,
                   ),
           ),

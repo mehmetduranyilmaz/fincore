@@ -1,7 +1,9 @@
 import 'package:fincore_app/app/state/app_data_refresh_coordinator.dart';
 import 'package:fincore_app/core/di/providers.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/credit_cards/presentation/providers/credit_card_balance_provider.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
@@ -21,6 +23,9 @@ void main() {
           const _CreditCardRepository(),
         ),
         transactionRepositoryProvider.overrideWithValue(repository),
+        creditCardStatementRepositoryProvider.overrideWithValue(
+          const _StatementRepository(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -39,6 +44,18 @@ void main() {
     expect((await container.read(provider.future)).currentDebt, 140);
     expect(repository.queryCount, 2);
   });
+}
+
+final class _StatementRepository implements CreditCardStatementRepository {
+  const _StatementRepository();
+
+  @override
+  Future<void> create(CreditCardStatement statement) async {}
+
+  @override
+  Future<List<CreditCardStatement>> getByCreditCardId(
+    String creditCardId,
+  ) async => const [];
 }
 
 Transaction _transaction({required String id, required double amount}) {

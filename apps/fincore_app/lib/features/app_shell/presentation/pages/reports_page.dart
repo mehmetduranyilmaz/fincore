@@ -30,7 +30,15 @@ final class ReportsPage extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const AppSectionHeader(title: ReportStrings.title),
+          AppSectionHeader(
+            title: ReportStrings.title,
+            action: IconButton(
+              key: const Key('open_cash_flow'),
+              tooltip: 'Nakit Akışı',
+              onPressed: () => context.push(AppRoutes.cashFlow),
+              icon: const Icon(Icons.account_balance_wallet_outlined),
+            ),
+          ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             ReportStrings.subtitle,

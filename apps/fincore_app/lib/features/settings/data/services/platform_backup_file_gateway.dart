@@ -7,14 +7,6 @@ import 'package:share_plus/share_plus.dart';
 final class PlatformBackupFileGateway implements BackupFileGateway {
   const PlatformBackupFileGateway();
 
-  static const selector.XTypeGroup _backupFiles = selector.XTypeGroup(
-    label: 'Fincore yedekleri',
-    extensions: ['fincorebackup'],
-    mimeTypes: ['application/json'],
-    uniformTypeIdentifiers: ['public.json'],
-    webWildCards: ['application/json'],
-  );
-
   @override
   Future<void> share({
     required String fileName,
@@ -38,7 +30,9 @@ final class PlatformBackupFileGateway implements BackupFileGateway {
   @override
   Future<List<int>?> pick() async {
     final file = await selector.openFile(
-      acceptedTypeGroups: const [_backupFiles],
+      // Android storage providers do not consistently assign a MIME type to
+      // the custom .fincorebackup extension. The authenticated envelope and
+      // payload are strictly validated before any data is replaced.
       confirmButtonText: 'Yedeği Seç',
     );
     return file?.readAsBytes();

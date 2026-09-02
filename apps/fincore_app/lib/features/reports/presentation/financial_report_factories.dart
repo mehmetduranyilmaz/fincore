@@ -1,6 +1,7 @@
 import 'package:fincore_app/core/formatters/app_formatters.dart';
 import 'package:fincore_app/core/reporting/financial_pdf_report.dart';
 import 'package:fincore_app/features/accounts/domain/entities/account.dart';
+import 'package:fincore_app/features/accounts/domain/entities/account_movement.dart';
 import 'package:fincore_app/features/categories/domain/entities/category.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_payment_calendar.dart';
@@ -13,6 +14,87 @@ import 'package:fincore_app/features/transactions/presentation/constants/transac
 import 'package:fincore_app/features/transactions/presentation/formatters/payment_source_formatter.dart';
 
 abstract final class FinancialReportFactories {
+  static FinancialPdfReport accountMovements({
+    required Account account,
+    required List<AccountMovement> movements,
+    required DateTime startDate,
+    required DateTime endDate,
+  }) {
+    var incoming = 0.0;
+    var outgoing = 0.0;
+    for (final item in movements) {
+      final delta = _accountMovementDelta(item.transaction);
+      if (delta >= 0) {
+        incoming += delta;
+      } else {
+        outgoing += delta.abs();
+      }
+    }
+    final currentBalance = movements.isEmpty
+        ? account.openingBalance
+        : movements.first.balanceAfterMovement;
+    return FinancialPdfReport(
+      title: '${account.name} - Hesap Ekstresi',
+      subtitle:
+          '${AppFormatters.date(startDate)} - ${AppFormatters.date(endDate)} hesap hareketleri',
+      metrics: [
+        FinancialReportMetric(
+          label: 'Dönem sonu bakiye',
+          value: AppFormatters.currency(
+            currentBalance,
+            currencyCode: account.currencyCode,
+          ),
+        ),
+        FinancialReportMetric(
+          label: 'Toplam giriş',
+          value: AppFormatters.currency(
+            incoming,
+            currencyCode: account.currencyCode,
+          ),
+        ),
+        FinancialReportMetric(
+          label: 'Toplam çıkış',
+          value: AppFormatters.currency(
+            outgoing,
+            currencyCode: account.currencyCode,
+          ),
+        ),
+      ],
+      columns: const [
+        FinancialReportColumn(label: 'Tarih', flex: 1.1),
+        FinancialReportColumn(label: 'Açıklama', flex: 2.5),
+        FinancialReportColumn(label: 'Tür', flex: 1.2),
+        FinancialReportColumn(
+          label: 'Tutar',
+          flex: 1.4,
+          alignment: FinancialReportAlignment.right,
+        ),
+        FinancialReportColumn(
+          label: 'Bakiye',
+          flex: 1.5,
+          alignment: FinancialReportAlignment.right,
+        ),
+      ],
+      rows: [
+        for (final item in movements)
+          [
+            AppFormatters.date(item.transaction.transactionDate),
+            item.transaction.merchant,
+            _accountMovementType(item.transaction.transactionType),
+            AppFormatters.currency(
+              _accountMovementDelta(item.transaction),
+              currencyCode: account.currencyCode,
+            ),
+            AppFormatters.currency(
+              item.balanceAfterMovement,
+              currencyCode: account.currencyCode,
+            ),
+          ],
+      ],
+      note: 'Ekstre, seçilen tarih aralığındaki hesap hareketlerini içerir.',
+    );
+  }
+
   static FinancialPdfReport transactions({
     required List<Transaction> transactions,
     required List<Account> accounts,
@@ -289,6 +371,19 @@ abstract final class FinancialReportFactories {
         transaction.isCustomerPayment && transaction.customerBalanceDelta! < 0;
     return isCollection ? CustomerStrings.collection : CustomerStrings.payment;
   }
+
+  static double _accountMovementDelta(Transaction transaction) =>
+      switch (transaction.transactionType) {
+        TransactionType.income => transaction.amount.abs(),
+        TransactionType.expense => -transaction.amount.abs(),
+        TransactionType.transfer => transaction.amount,
+      };
+
+  static String _accountMovementType(TransactionType type) => switch (type) {
+    TransactionType.income => 'Gelir',
+    TransactionType.expense => 'Gider',
+    TransactionType.transfer => 'Transfer',
+  };
 
   static String _balanceCode(double balance) {
     if (balance > 0) return CustomerStrings.debtorCode;

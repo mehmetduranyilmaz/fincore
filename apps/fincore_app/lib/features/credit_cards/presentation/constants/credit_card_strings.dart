@@ -84,7 +84,7 @@ abstract final class CreditCardStrings {
     required int plannedCount,
   }) {
     if (confirmedCount == 0) return '$plannedCount planlanan gider';
-    if (plannedCount == 0) return '$confirmedCount kesinleşmiş ödeme';
+    if (plannedCount == 0) return '$confirmedCount kesinleşmiş gider';
     return '$confirmedCount kesinleşmiş • $plannedCount planlanan';
   }
 

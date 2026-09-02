@@ -2,6 +2,7 @@ import 'package:fincore_app/app/router/app_routes.dart';
 import 'package:fincore_app/app/state/app_controller.dart';
 import 'package:fincore_app/app/state/app_state.dart';
 import 'package:fincore_app/features/accounts/presentation/pages/account_form_pages.dart';
+import 'package:fincore_app/features/accounts/presentation/pages/account_movements_page.dart';
 import 'package:fincore_app/features/app_shell/presentation/pages/app_shell_page.dart';
 import 'package:fincore_app/features/auth/presentation/pages/login_page.dart';
 import 'package:fincore_app/features/auth/presentation/pages/profile_page.dart';
@@ -32,6 +33,7 @@ import 'package:fincore_app/features/transactions/presentation/pages/edit_transa
 import 'package:fincore_app/features/transactions/presentation/pages/edit_recurring_expense_plan_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/recurring_expense_plans_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/transaction_details_page.dart';
+import 'package:fincore_app/features/reports/presentation/pages/cash_flow_page.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -208,6 +210,16 @@ abstract final class AppRouter {
           path: AppRoutes.editAccount,
           builder: (context, state) =>
               EditAccountPage(accountId: state.pathParameters['accountId']!),
+        ),
+        GoRoute(
+          path: AppRoutes.accountMovements,
+          builder: (context, state) => AccountMovementsPage(
+            accountId: state.pathParameters['accountId']!,
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.cashFlow,
+          builder: (context, state) => const CashFlowPage(),
         ),
       ],
     );

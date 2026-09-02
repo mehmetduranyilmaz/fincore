@@ -4,6 +4,9 @@ import 'package:fincore_app/features/categories/domain/entities/category.dart';
 import 'package:fincore_app/features/categories/domain/repositories/category_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/services/credit_card_period_calculator.dart';
 import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:fincore_app/features/customers/domain/entities/customer.dart';
 import 'package:fincore_app/features/reports/domain/entities/expense_category_report.dart';
@@ -18,8 +21,9 @@ final class CalculateExpenseCategoryReportUseCase {
     this._categoryRepository,
     this._accountRepository,
     this._creditCardRepository,
-    this._customerRepository,
-  );
+    this._customerRepository, [
+    this._statementRepository,
+  ]);
 
   static const String unknownCurrencyCode = 'N/A';
   static const String uncategorizedName = 'Kategorisiz';
@@ -30,13 +34,14 @@ final class CalculateExpenseCategoryReportUseCase {
   final AccountRepository _accountRepository;
   final CreditCardRepository _creditCardRepository;
   final CustomerRepository _customerRepository;
+  final CreditCardStatementRepository? _statementRepository;
 
   Future<ExpenseCategoryReport> execute(ExpenseReportPeriod period) async {
     final results = await Future.wait<Object>([
       _transactionRepository.getTransactions(
         TransactionFilter(
           transactionTypes: const {TransactionType.expense},
-          startDate: period.startDate,
+          startDate: period.startDate.subtract(const Duration(days: 31)),
           endDate: period.endDate,
         ),
       ),
@@ -50,6 +55,13 @@ final class CalculateExpenseCategoryReportUseCase {
     final accounts = results[2] as List<Account>;
     final creditCards = results[3] as List<CreditCard>;
     final customers = results[4] as List<Customer>;
+    final statementsByCard = <String, List<CreditCardStatement>>{};
+    if (_statementRepository != null) {
+      for (final card in creditCards) {
+        statementsByCard[card.id] = await _statementRepository
+            .getByCreditCardId(card.id);
+      }
+    }
     final accountCurrencies = {
       for (final account in accounts) account.id: account.currencyCode,
     };
@@ -65,7 +77,14 @@ final class CalculateExpenseCategoryReportUseCase {
     final grouped = <String, Map<String, _CategoryAccumulator>>{};
 
     for (final transaction in transactions) {
-      if (!_belongsToPeriod(transaction, period)) continue;
+      if (!_belongsToPeriod(
+        transaction,
+        period,
+        cardsById: {for (final card in creditCards) card.id: card},
+        statementsByCard: statementsByCard,
+      )) {
+        continue;
+      }
       final currencyCode = transaction.accountId != null
           ? accountCurrencies[transaction.accountId]
           : transaction.creditCardId != null
@@ -126,12 +145,24 @@ final class CalculateExpenseCategoryReportUseCase {
 
   static bool _belongsToPeriod(
     Transaction transaction,
-    ExpenseReportPeriod period,
-  ) {
-    return !transaction.isDeleted &&
-        transaction.isActualExpense &&
-        !transaction.transactionDate.isBefore(period.startDate) &&
-        !transaction.transactionDate.isAfter(period.endDate);
+    ExpenseReportPeriod period, {
+    required Map<String, CreditCard> cardsById,
+    required Map<String, List<CreditCardStatement>> statementsByCard,
+  }) {
+    if (transaction.isDeleted || !transaction.isActualExpense) return false;
+    var effectiveDate = transaction.transactionDate;
+    final cardId = transaction.creditCardId;
+    final card = cardId == null ? null : cardsById[cardId];
+    if (cardId != null && card != null) {
+      effectiveDate = CreditCardPeriodCalculator.transactionPeriod(
+        transactionId: transaction.id,
+        transactionDate: transaction.transactionDate,
+        statementDay: card.statementDay,
+        statements: statementsByCard[cardId] ?? const [],
+      );
+    }
+    return !effectiveDate.isBefore(period.startDate) &&
+        !effectiveDate.isAfter(period.endDate);
   }
 
   static const String _uncategorizedKey = '__uncategorized__';

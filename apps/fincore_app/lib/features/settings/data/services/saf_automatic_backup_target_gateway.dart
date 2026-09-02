@@ -25,8 +25,20 @@ final class SafAutomaticBackupTargetGateway
   Future<bool> hasWritePermission(String uri) async {
     final permissions = await _saf.persistedPermissions();
     return permissions.any(
-      (permission) => permission.uri == uri && permission.write,
+      (permission) =>
+          _permissionUri(permission.uri) == _permissionUri(uri) &&
+          permission.write,
     );
+  }
+
+  static String _permissionUri(String value) {
+    final uri = Uri.parse(value);
+    final segments = uri.pathSegments;
+    if (segments.length >= 2 && segments[0] == 'tree') {
+      return '${uri.scheme}://${uri.authority}/tree/'
+          '${Uri.encodeComponent(segments[1])}';
+    }
+    return uri.toString();
   }
 
   @override

@@ -4,6 +4,7 @@ final class CreditCardBalance {
   factory CreditCardBalance({
     required double creditLimit,
     required double currentDebt,
+    double? availableLimitUsed,
     required double totalSpent,
     required double totalPayments,
   }) {
@@ -11,7 +12,9 @@ final class CreditCardBalance {
       currentDebt: currentDebt,
       totalSpent: totalSpent,
       totalPayments: totalPayments,
-      availableLimit: math.max(0, creditLimit - currentDebt).toDouble(),
+      availableLimit: math
+          .max(0, creditLimit - (availableLimitUsed ?? currentDebt))
+          .toDouble(),
     );
   }
 

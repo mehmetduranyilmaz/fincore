@@ -14,7 +14,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 final class CreditCardPaymentCalendarPage extends ConsumerStatefulWidget {
-  const CreditCardPaymentCalendarPage({super.key});
+  const CreditCardPaymentCalendarPage({this.referenceDate, super.key});
+
+  final DateTime? referenceDate;
 
   @override
   ConsumerState<CreditCardPaymentCalendarPage> createState() =>
@@ -25,6 +27,15 @@ final class _CreditCardPaymentCalendarPageState
     extends ConsumerState<CreditCardPaymentCalendarPage> {
   bool _showMonths = true;
   bool _showDetails = true;
+  late DateTime _startMonth;
+  DateTime? _endMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = widget.referenceDate ?? DateTime.now();
+    _startMonth = DateTime(now.year, now.month - 3);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,90 +60,156 @@ final class _CreditCardPaymentCalendarPageState
         loading: () => const AppLoadingView(),
         error: (error, stackTrace) =>
             Center(child: Text(CreditCardStrings.paymentCalendarUnableToLoad)),
-        data: (value) => value.isEmpty
-            ? const AppEmptyState(
-                icon: Icons.event_available_outlined,
-                title: CreditCardStrings.noScheduledPayments,
-                description: CreditCardStrings.noScheduledPaymentsDescription,
-              )
-            : SafeArea(
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 760),
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(AppSpacing.lg),
-                      itemCount: value.years.length + 2,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: AppSpacing.md),
-                      itemBuilder: (context, index) {
-                        if (index == 0) {
-                          return const _CalendarExplanation();
-                        }
-                        if (index == 1) {
-                          return Wrap(
-                            alignment: WrapAlignment.end,
-                            spacing: AppSpacing.sm,
-                            runSpacing: AppSpacing.sm,
-                            children: [
-                              OutlinedButton.icon(
-                                key: const Key(
-                                  'payment_calendar_toggle_months',
+        data: (calendarValue) {
+          final value = _filterCalendar(calendarValue);
+          return value.isEmpty
+              ? const AppEmptyState(
+                  icon: Icons.event_available_outlined,
+                  title: CreditCardStrings.noScheduledPayments,
+                  description: CreditCardStrings.noScheduledPaymentsDescription,
+                )
+              : SafeArea(
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: ListView.separated(
+                        padding: const EdgeInsets.all(AppSpacing.lg),
+                        itemCount: value.years.length + 2,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: AppSpacing.md),
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return const _CalendarExplanation();
+                          }
+                          if (index == 1) {
+                            return Wrap(
+                              alignment: WrapAlignment.end,
+                              spacing: AppSpacing.sm,
+                              runSpacing: AppSpacing.sm,
+                              children: [
+                                OutlinedButton.icon(
+                                  key: const Key('payment_calendar_date_range'),
+                                  onPressed: _selectDateRange,
+                                  icon: const Icon(Icons.date_range_outlined),
+                                  label: Text(
+                                    _endMonth == null
+                                        ? '${_monthLabel(_startMonth)} - tüm gelecek'
+                                        : '${_monthLabel(_startMonth)} - ${_monthLabel(_endMonth!)}',
+                                  ),
                                 ),
-                                onPressed: () => setState(() {
-                                  if (_showMonths) {
-                                    _showMonths = false;
-                                    _showDetails = false;
-                                  } else {
-                                    _showMonths = true;
-                                  }
-                                }),
-                                icon: Icon(
-                                  _showMonths
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
+                                OutlinedButton.icon(
+                                  key: const Key(
+                                    'payment_calendar_toggle_months',
+                                  ),
+                                  onPressed: () => setState(() {
+                                    if (_showMonths) {
+                                      _showMonths = false;
+                                      _showDetails = false;
+                                    } else {
+                                      _showMonths = true;
+                                    }
+                                  }),
+                                  icon: Icon(
+                                    _showMonths
+                                        ? Icons.visibility_off_outlined
+                                        : Icons.visibility_outlined,
+                                  ),
+                                  label: Text(
+                                    _showMonths
+                                        ? CreditCardStrings.hideMonths
+                                        : CreditCardStrings.showMonths,
+                                  ),
                                 ),
-                                label: Text(
-                                  _showMonths
-                                      ? CreditCardStrings.hideMonths
-                                      : CreditCardStrings.showMonths,
+                                OutlinedButton.icon(
+                                  key: const Key(
+                                    'payment_calendar_toggle_details',
+                                  ),
+                                  onPressed: !_showMonths
+                                      ? null
+                                      : () => setState(
+                                          () => _showDetails = !_showDetails,
+                                        ),
+                                  icon: Icon(
+                                    _showDetails
+                                        ? Icons.list_alt_outlined
+                                        : Icons.format_list_bulleted_outlined,
+                                  ),
+                                  label: Text(
+                                    _showDetails
+                                        ? CreditCardStrings.hideDetails
+                                        : CreditCardStrings.showDetails,
+                                  ),
                                 ),
-                              ),
-                              OutlinedButton.icon(
-                                key: const Key(
-                                  'payment_calendar_toggle_details',
-                                ),
-                                onPressed: !_showMonths
-                                    ? null
-                                    : () => setState(
-                                        () => _showDetails = !_showDetails,
-                                      ),
-                                icon: Icon(
-                                  _showDetails
-                                      ? Icons.list_alt_outlined
-                                      : Icons.format_list_bulleted_outlined,
-                                ),
-                                label: Text(
-                                  _showDetails
-                                      ? CreditCardStrings.hideDetails
-                                      : CreditCardStrings.showDetails,
-                                ),
-                              ),
-                            ],
+                              ],
+                            );
+                          }
+                          return _PaymentYearCard(
+                            year: value.years[index - 2],
+                            showMonths: _showMonths,
+                            showDetails: _showDetails,
                           );
-                        }
-                        return _PaymentYearCard(
-                          year: value.years[index - 2],
-                          showMonths: _showMonths,
-                          showDetails: _showDetails,
-                        );
-                      },
+                        },
+                      ),
                     ),
                   ),
-                ),
-              ),
+                );
+        },
       ),
     );
   }
+
+  CreditCardPaymentCalendar _filterCalendar(
+    CreditCardPaymentCalendar calendar,
+  ) {
+    final years = <CreditCardPaymentYear>[];
+    for (final year in calendar.years) {
+      final months = year.months.where((month) {
+        final date = DateTime(month.year, month.month);
+        return !date.isBefore(_startMonth) &&
+            (_endMonth == null || !date.isAfter(_endMonth!));
+      }).toList();
+      if (months.isEmpty) continue;
+      final totals = <String, double>{};
+      for (final month in months) {
+        for (final entry in month.totalsByCurrency.entries) {
+          totals.update(
+            entry.key,
+            (value) => value + entry.value,
+            ifAbsent: () => entry.value,
+          );
+        }
+      }
+      years.add(
+        CreditCardPaymentYear(
+          year: year.year,
+          months: months,
+          totalsByCurrency: totals,
+        ),
+      );
+    }
+    return CreditCardPaymentCalendar(years);
+  }
+
+  Future<void> _selectDateRange() async {
+    final now = DateTime.now();
+    final selected = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(now.year + 20, 12, 31),
+      initialDateRange: DateTimeRange(
+        start: _startMonth,
+        end: _endMonth ?? DateTime(now.year + 1, now.month),
+      ),
+    );
+    if (selected == null || !mounted) return;
+    setState(() {
+      _startMonth = DateTime(selected.start.year, selected.start.month);
+      _endMonth = DateTime(selected.end.year, selected.end.month);
+    });
+  }
+
+  static String _monthLabel(DateTime date) =>
+      '${date.year}-${date.month.toString().padLeft(2, '0')}';
 }
 
 final class _CalendarExplanation extends StatelessWidget {
@@ -228,6 +305,8 @@ final class _PaymentMonthRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final percentage = (month.completionRatio * 100).round();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Column(
@@ -251,6 +330,38 @@ final class _PaymentMonthRow extends StatelessWidget {
                         confirmedCount: month.confirmedTransactionCount,
                         plannedCount: month.plannedExpenseCount,
                       ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    Row(
+                      children: [
+                        if (month.isPaid) ...[
+                          Icon(
+                            Icons.check_circle,
+                            size: 18,
+                            color: colors.tertiary,
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                        ],
+                        Text(
+                          '%$percentage tamamlandı',
+                          key: Key('payment_progress_${month.periodLabel}'),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: month.isPaid
+                                    ? colors.tertiary
+                                    : colors.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                              ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    LinearProgressIndicator(value: month.completionRatio),
+                    const SizedBox(height: AppSpacing.xs),
+                    _CurrencyTotals(
+                      totals: month.remainingByCurrency,
+                      prefix: 'Kalan: ',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
@@ -293,6 +404,10 @@ final class _PaymentDetailRow extends StatelessWidget {
         child: Row(
           children: [
             Icon(_detailIcon(detail.kind), size: 20, color: colors.primary),
+            if (detail.isPaid) ...[
+              const SizedBox(width: AppSpacing.xs),
+              Icon(Icons.check_circle, size: 20, color: colors.tertiary),
+            ],
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(
@@ -336,10 +451,11 @@ final class _PaymentDetailRow extends StatelessWidget {
 }
 
 final class _CurrencyTotals extends StatelessWidget {
-  const _CurrencyTotals({required this.totals, this.style});
+  const _CurrencyTotals({required this.totals, this.style, this.prefix = ''});
 
   final Map<String, double> totals;
   final TextStyle? style;
+  final String prefix;
 
   @override
   Widget build(BuildContext context) {
@@ -348,7 +464,7 @@ final class _CurrencyTotals extends StatelessWidget {
       children: [
         for (final entry in totals.entries)
           Text(
-            AppFormatters.currency(entry.value, currencyCode: entry.key),
+            '$prefix${AppFormatters.currency(entry.value, currencyCode: entry.key)}',
             style:
                 style ??
                 Theme.of(

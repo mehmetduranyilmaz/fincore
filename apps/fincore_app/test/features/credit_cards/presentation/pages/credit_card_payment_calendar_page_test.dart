@@ -22,7 +22,7 @@ void main() {
         ],
         child: MaterialApp(
           theme: AppTheme.light,
-          home: const CreditCardPaymentCalendarPage(),
+          home: CreditCardPaymentCalendarPage(referenceDate: DateTime(2026, 1)),
         ),
       ),
     );

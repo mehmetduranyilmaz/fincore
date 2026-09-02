@@ -22,6 +22,42 @@ void main() {
       expect(result.map((item) => item.id), ['customer-payment']);
     },
   );
+
+  test(
+    'keeps an unassigned installment out of period even when its date arrives',
+    () async {
+      final installment = Transaction(
+        id: 'september-installment',
+        accountId: null,
+        creditCardId: 'card-1',
+        amount: 1250,
+        transactionType: TransactionType.expense,
+        categoryId: null,
+        merchant: 'Taksit',
+        note: null,
+        transactionDate: DateTime(2026, 9, 15),
+        source: TransactionSource.manual,
+        isDeleted: false,
+        installmentPlanId: 'plan-1',
+        installmentNumber: 2,
+        installmentCount: 4,
+        installmentTotalAmount: 5000,
+      );
+      final before = GetCreditCardCurrentPeriodTransactionsUseCase(
+        _TransactionRepository([installment]),
+        const _StatementRepository(),
+        clock: () => DateTime(2026, 9, 2),
+      );
+      final onDate = GetCreditCardCurrentPeriodTransactionsUseCase(
+        _TransactionRepository([installment]),
+        const _StatementRepository(),
+        clock: () => DateTime(2026, 9, 15),
+      );
+
+      expect(await before.execute('card-1'), isEmpty);
+      expect(await onDate.execute('card-1'), isEmpty);
+    },
+  );
 }
 
 Transaction _customerCardPayment() => Transaction(

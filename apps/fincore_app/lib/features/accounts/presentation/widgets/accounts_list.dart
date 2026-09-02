@@ -7,6 +7,7 @@ final class AccountsList extends StatelessWidget {
   const AccountsList({
     required this.accounts,
     required this.onEdit,
+    required this.onOpen,
     required this.onDelete,
     super.key,
   });
@@ -15,6 +16,7 @@ final class AccountsList extends StatelessWidget {
 
   final List<Account> accounts;
   final ValueChanged<Account> onEdit;
+  final ValueChanged<Account> onOpen;
   final ValueChanged<Account> onDelete;
 
   @override
@@ -29,6 +31,7 @@ final class AccountsList extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
             itemBuilder: (context, index) => AccountCard(
               account: accounts[index],
+              onTap: () => onOpen(accounts[index]),
               onEdit: () => onEdit(accounts[index]),
               onDelete: () => onDelete(accounts[index]),
             ),
@@ -46,6 +49,7 @@ final class AccountsList extends StatelessWidget {
           ),
           itemBuilder: (context, index) => AccountCard(
             account: accounts[index],
+            onTap: () => onOpen(accounts[index]),
             onEdit: () => onEdit(accounts[index]),
             onDelete: () => onDelete(accounts[index]),
           ),

@@ -1,17 +1,24 @@
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_balance.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
 
+typedef CreditCardBalanceClock = DateTime Function();
+
 final class CalculateCreditCardBalanceUseCase {
-  const CalculateCreditCardBalanceUseCase(
+  CalculateCreditCardBalanceUseCase(
     this._creditCardRepository,
-    this._transactionRepository,
-  );
+    this._transactionRepository, {
+    this._statementRepository,
+    CreditCardBalanceClock? clock,
+  }) : _clock = clock ?? DateTime.now;
 
   final CreditCardRepository _creditCardRepository;
   final TransactionRepository _transactionRepository;
+  final CreditCardStatementRepository? _statementRepository;
+  final CreditCardBalanceClock _clock;
 
   Future<CreditCardBalance> execute(String creditCardId) async {
     if (creditCardId.trim().isEmpty) {
@@ -27,7 +34,7 @@ final class CalculateCreditCardBalanceUseCase {
     final transactions = await _transactionRepository.getTransactions(
       TransactionFilter(creditCardId: creditCardId),
     );
-    var currentDebt = 0.0;
+    var availableLimitUsed = 0.0;
     var totalSpent = 0.0;
     var totalPayments = 0.0;
 
@@ -39,12 +46,63 @@ final class CalculateCreditCardBalanceUseCase {
       switch (transaction.transactionType) {
         case TransactionType.expense:
           final amount = transaction.amount.abs();
-          currentDebt += amount;
+          availableLimitUsed += amount;
           totalSpent += amount;
         case TransactionType.income:
           final amount = transaction.amount.abs();
-          currentDebt -= amount;
+          availableLimitUsed -= amount;
           totalPayments += amount;
+        case TransactionType.transfer:
+          continue;
+      }
+    }
+
+    // Keep the use case usable with its legacy two-repository construction in
+    // isolated callers. Production injects the statement repository below.
+    if (_statementRepository == null) {
+      return CreditCardBalance(
+        creditLimit: creditCard.creditLimit,
+        currentDebt: availableLimitUsed,
+        availableLimitUsed: availableLimitUsed,
+        totalSpent: totalSpent,
+        totalPayments: totalPayments,
+      );
+    }
+
+    final statements = await _statementRepository.getByCreditCardId(
+      creditCardId,
+    );
+    final assignedIds = statements
+        .expand((statement) => statement.lines)
+        .map((line) => line.transactionId)
+        .toSet();
+    var currentDebt = 0.0;
+    for (final statement in statements) {
+      final paid = transactions
+          .where(
+            (transaction) =>
+                !transaction.isDeleted &&
+                transaction.isCreditCardDebtPayment &&
+                transaction.creditCardStatementId == statement.id,
+          )
+          .fold<double>(0, (sum, item) => sum + item.amount.abs());
+      currentDebt += (statement.totalAmount - paid).clamp(0.0, double.infinity);
+    }
+    final now = _clock();
+    for (final transaction in transactions) {
+      if (transaction.isDeleted ||
+          transaction.creditCardId != creditCardId ||
+          assignedIds.contains(transaction.id) ||
+          transaction.isInstallment ||
+          transaction.isCreditCardDebtPayment ||
+          transaction.transactionDate.isAfter(now)) {
+        continue;
+      }
+      switch (transaction.transactionType) {
+        case TransactionType.expense:
+          currentDebt += transaction.amount.abs();
+        case TransactionType.income:
+          currentDebt -= transaction.amount.abs();
         case TransactionType.transfer:
           continue;
       }
@@ -53,6 +111,7 @@ final class CalculateCreditCardBalanceUseCase {
     return CreditCardBalance(
       creditLimit: creditCard.creditLimit,
       currentDebt: currentDebt,
+      availableLimitUsed: availableLimitUsed,
       totalSpent: totalSpent,
       totalPayments: totalPayments,
     );

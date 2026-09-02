@@ -4,7 +4,9 @@ import 'package:fincore_app/features/accounts/domain/entities/account.dart';
 import 'package:fincore_app/features/accounts/domain/entities/account_type.dart';
 import 'package:fincore_app/features/accounts/domain/repositories/account_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/dashboard/presentation/providers/dashboard_summary_provider.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
@@ -36,6 +38,9 @@ void main() {
           const _CreditCardRepository(),
         ),
         transactionRepositoryProvider.overrideWithValue(transactionRepository),
+        creditCardStatementRepositoryProvider.overrideWithValue(
+          const _StatementRepository(),
+        ),
       ],
     );
     addTearDown(container.dispose);
@@ -67,6 +72,18 @@ void main() {
     expect(refreshed.monthlyExpense, 30);
     expect(refreshed.netWorth, 80);
   });
+}
+
+final class _StatementRepository implements CreditCardStatementRepository {
+  const _StatementRepository();
+
+  @override
+  Future<void> create(CreditCardStatement statement) async {}
+
+  @override
+  Future<List<CreditCardStatement>> getByCreditCardId(
+    String creditCardId,
+  ) async => const [];
 }
 
 Transaction _transaction({

@@ -1,6 +1,7 @@
 import 'package:fincore_app/core/di/datasources.dart';
 import 'package:fincore_app/core/di/repositories.dart';
 import 'package:fincore_app/features/accounts/domain/usecases/get_accounts.dart';
+import 'package:fincore_app/features/accounts/domain/usecases/get_account_movements.dart';
 import 'package:fincore_app/features/accounts/domain/usecases/calculate_account_balance.dart';
 import 'package:fincore_app/features/accounts/domain/usecases/create_account.dart';
 import 'package:fincore_app/features/accounts/domain/usecases/delete_account.dart';
@@ -37,6 +38,7 @@ import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_car
 import 'package:fincore_app/features/credit_cards/domain/usecases/update_credit_card.dart';
 import 'package:fincore_app/features/dashboard/domain/usecases/calculate_dashboard_summary.dart';
 import 'package:fincore_app/features/reports/domain/usecases/calculate_expense_category_report.dart';
+import 'package:fincore_app/features/reports/domain/usecases/calculate_cash_flow_report.dart';
 import 'package:fincore_app/features/customers/domain/usecases/calculate_customer_balance.dart';
 import 'package:fincore_app/features/customers/domain/usecases/create_credit_card_payment.dart';
 import 'package:fincore_app/features/customers/domain/usecases/create_customer.dart';
@@ -115,12 +117,29 @@ calculateExpenseCategoryReportProvider =
         ref.watch(accountRepositoryProvider),
         ref.watch(creditCardRepositoryProvider),
         ref.watch(customerRepositoryProvider),
+        ref.watch(creditCardStatementRepositoryProvider),
+      ),
+    );
+
+final Provider<CalculateCashFlowReportUseCase> calculateCashFlowReportProvider =
+    Provider<CalculateCashFlowReportUseCase>(
+      (ref) => CalculateCashFlowReportUseCase(
+        ref.watch(transactionRepositoryProvider),
+        ref.watch(accountRepositoryProvider),
       ),
     );
 
 final Provider<GetAccounts> getAccountsProvider = Provider<GetAccounts>(
   (ref) => GetAccounts(ref.watch(accountRepositoryProvider)),
 );
+
+final Provider<GetAccountMovementsUseCase> getAccountMovementsProvider =
+    Provider<GetAccountMovementsUseCase>(
+      (ref) => GetAccountMovementsUseCase(
+        ref.watch(transactionRepositoryProvider),
+        ref.watch(accountRepositoryProvider),
+      ),
+    );
 
 final Provider<CreateAccountUseCase> createAccountProvider =
     Provider<CreateAccountUseCase>(
@@ -191,6 +210,7 @@ calculateCreditCardBalanceProvider =
       (ref) => CalculateCreditCardBalanceUseCase(
         ref.watch(creditCardRepositoryProvider),
         ref.watch(transactionRepositoryProvider),
+        statementRepository: ref.watch(creditCardStatementRepositoryProvider),
       ),
     );
 
@@ -232,6 +252,7 @@ getCreditCardPaymentCalendarProvider =
         ),
         accountRepository: ref.watch(accountRepositoryProvider),
         customerRepository: ref.watch(customerRepositoryProvider),
+        statementRepository: ref.watch(creditCardStatementRepositoryProvider),
       ),
     );
 

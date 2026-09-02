@@ -23,7 +23,12 @@ void main() {
               DateTime(2026, 8, 6),
               22750,
             ),
-            _cardDebtPayment('card-payment', DateTime(2026, 8, 6), 500),
+            _cardDebtPayment(
+              'card-payment',
+              DateTime(2026, 8, 6),
+              500,
+              statementId: 'other-statement',
+            ),
             _expense('future', DateTime(2026, 9, 6), 25, installment: true),
           ],
         ),
@@ -58,27 +63,127 @@ void main() {
     },
   );
 
-  test('future total starts after the upcoming statement cutoff', () async {
+  test('shows the remaining latest statement amount after payments', () async {
     final repository = TransactionRepositoryImpl(
       TransactionMockDataSource(
         initialTransactions: [
-          _expense('august', DateTime(2026, 8, 15), 1000, installment: true),
-          _expense('september', DateTime(2026, 9, 15), 1000, installment: true),
-          _expense('october', DateTime(2026, 10, 15), 1000, installment: true),
-          _expense('november', DateTime(2026, 11, 15), 1000, installment: true),
+          _expense('statement', DateTime(2026, 8, 5), 60004.21),
+          _cardDebtPayment(
+            'partial-payment',
+            DateTime(2026, 9, 1),
+            30004.21,
+            statementId: 'statement-1',
+          ),
         ],
       ),
     );
     final useCase = GetCreditCardActivitySummaryUseCase(
       repository,
-      statementRepository: const _StatementRepository([]),
-      clock: () => DateTime(2026, 8, 8),
+      statementRepository: _StatementRepository([
+        CreditCardStatement(
+          id: 'statement-1',
+          creditCardId: _card.id,
+          statementDate: DateTime(2026, 8, 30),
+          dueDate: DateTime(2026, 9, 10),
+          createdAt: DateTime(2026, 8, 30),
+          lines: [
+            CreditCardStatementLine(
+              transactionId: 'statement',
+              description: 'statement',
+              transactionDate: DateTime(2026, 8, 5),
+              amount: 60004.21,
+            ),
+          ],
+        ),
+      ]),
+      clock: () => DateTime(2026, 9, 1),
     );
 
-    final summary = await useCase.execute(_card.copyWith(statementDay: 20));
+    final summary = await useCase.execute(_card);
 
-    expect(summary.futureInstallmentAmount, 3000);
+    expect(summary.statementAmount, closeTo(30000, 0.001));
   });
+
+  test('shows zero for a fully paid latest statement', () async {
+    final repository = TransactionRepositoryImpl(
+      TransactionMockDataSource(
+        initialTransactions: [
+          _expense('statement', DateTime(2026, 8, 5), 30004.21),
+          _cardDebtPayment(
+            'full-payment',
+            DateTime(2026, 9, 1),
+            30004.21,
+            statementId: 'statement-1',
+          ),
+        ],
+      ),
+    );
+    final useCase = GetCreditCardActivitySummaryUseCase(
+      repository,
+      statementRepository: _StatementRepository([
+        CreditCardStatement(
+          id: 'statement-1',
+          creditCardId: _card.id,
+          statementDate: DateTime(2026, 8, 30),
+          dueDate: DateTime(2026, 9, 10),
+          createdAt: DateTime(2026, 8, 30),
+          lines: [
+            CreditCardStatementLine(
+              transactionId: 'statement',
+              description: 'statement',
+              transactionDate: DateTime(2026, 8, 5),
+              amount: 30004.21,
+            ),
+          ],
+        ),
+      ]),
+      clock: () => DateTime(2026, 9, 1),
+    );
+
+    final summary = await useCase.execute(_card);
+
+    expect(summary.statementAmount, 0);
+  });
+
+  test(
+    'future total includes later installments in the current month',
+    () async {
+      final repository = TransactionRepositoryImpl(
+        TransactionMockDataSource(
+          initialTransactions: [
+            _expense('august', DateTime(2026, 8, 15), 1000, installment: true),
+            _expense(
+              'september',
+              DateTime(2026, 9, 15),
+              1000,
+              installment: true,
+            ),
+            _expense(
+              'october',
+              DateTime(2026, 10, 15),
+              1000,
+              installment: true,
+            ),
+            _expense(
+              'november',
+              DateTime(2026, 11, 15),
+              1000,
+              installment: true,
+            ),
+          ],
+        ),
+      );
+      final useCase = GetCreditCardActivitySummaryUseCase(
+        repository,
+        statementRepository: const _StatementRepository([]),
+        clock: () => DateTime(2026, 8, 8),
+      );
+
+      final summary = await useCase.execute(_card.copyWith(statementDay: 20));
+
+      expect(summary.futureInstallmentAmount, 4000);
+    },
+  );
 }
 
 Transaction _customerCardPayment(String id, DateTime date, double amount) {
@@ -100,7 +205,12 @@ Transaction _customerCardPayment(String id, DateTime date, double amount) {
   );
 }
 
-Transaction _cardDebtPayment(String id, DateTime date, double amount) {
+Transaction _cardDebtPayment(
+  String id,
+  DateTime date,
+  double amount, {
+  String? statementId,
+}) {
   return Transaction(
     id: id,
     accountId: null,
@@ -114,6 +224,7 @@ Transaction _cardDebtPayment(String id, DateTime date, double amount) {
     source: TransactionSource.manual,
     isDeleted: false,
     paymentGroupId: 'card-payment-group',
+    creditCardStatementId: statementId,
   );
 }
 

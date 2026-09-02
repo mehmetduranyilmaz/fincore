@@ -1,6 +1,7 @@
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
-import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_balance.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/calculate_credit_card_balance.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
@@ -41,15 +42,9 @@ void main() {
 
     final result = await useCase.execute('credit-card-1');
 
-    expect(
-      result,
-      CreditCardBalance(
-        creditLimit: 10000,
-        currentDebt: 2000,
-        totalSpent: 3000,
-        totalPayments: 1000,
-      ),
-    );
+    expect(result.currentDebt, 2000);
+    expect(result.totalSpent, 3000);
+    expect(result.totalPayments, 1000);
     expect(result.availableLimit, 8000);
   });
 
@@ -70,6 +65,67 @@ void main() {
     expect(result.currentDebt, 12000);
     expect(result.availableLimit, 0);
   });
+
+  test(
+    'separates statement and current debt from installment limit exposure',
+    () async {
+      final statementExpense = _transaction(
+        id: 'statement-expense',
+        amount: 3000,
+        type: TransactionType.expense,
+      );
+      final statementPayment = _transaction(
+        id: 'statement-payment',
+        amount: 3000,
+        type: TransactionType.income,
+        paymentGroupId: 'payment-group',
+        statementId: 'statement-1',
+      );
+      final currentExpense = _transaction(
+        id: 'current-expense',
+        amount: 500,
+        type: TransactionType.expense,
+      );
+      final futureInstallment = _transaction(
+        id: 'future-installment',
+        amount: 2000,
+        type: TransactionType.expense,
+        installment: true,
+      );
+      final useCase = CalculateCreditCardBalanceUseCase(
+        const _CreditCardRepository([_creditCard]),
+        _TransactionRepository([
+          statementExpense,
+          statementPayment,
+          currentExpense,
+          futureInstallment,
+        ]),
+        statementRepository: _StatementRepository([
+          CreditCardStatement(
+            id: 'statement-1',
+            creditCardId: _creditCard.id,
+            statementDate: DateTime(2026, 8, 31),
+            dueDate: DateTime(2026, 9, 10),
+            createdAt: DateTime(2026, 8, 31),
+            lines: [
+              CreditCardStatementLine(
+                transactionId: statementExpense.id,
+                description: statementExpense.merchant,
+                transactionDate: statementExpense.transactionDate,
+                amount: statementExpense.amount,
+              ),
+            ],
+          ),
+        ]),
+        clock: () => DateTime(2026, 9, 2),
+      );
+
+      final result = await useCase.execute(_creditCard.id);
+
+      expect(result.currentDebt, 500);
+      expect(result.availableLimit, 7500);
+    },
+  );
 }
 
 const CreditCard _creditCard = CreditCard(
@@ -90,6 +146,9 @@ Transaction _transaction({
   required double amount,
   required TransactionType type,
   bool isDeleted = false,
+  bool installment = false,
+  String? paymentGroupId,
+  String? statementId,
 }) {
   return Transaction(
     id: id,
@@ -104,7 +163,27 @@ Transaction _transaction({
     source: TransactionSource.import,
     isDeleted: isDeleted,
     transferGroupId: type == TransactionType.transfer ? 'group-$id' : null,
+    installmentPlanId: installment ? 'plan-$id' : null,
+    installmentNumber: installment ? 1 : null,
+    installmentCount: installment ? 2 : null,
+    installmentTotalAmount: installment ? amount * 2 : null,
+    paymentGroupId: paymentGroupId,
+    creditCardStatementId: statementId,
   );
+}
+
+final class _StatementRepository implements CreditCardStatementRepository {
+  const _StatementRepository(this.statements);
+
+  final List<CreditCardStatement> statements;
+
+  @override
+  Future<void> create(CreditCardStatement statement) async {}
+
+  @override
+  Future<List<CreditCardStatement>> getByCreditCardId(
+    String creditCardId,
+  ) async => statements;
 }
 
 final class _CreditCardRepository implements CreditCardRepository {

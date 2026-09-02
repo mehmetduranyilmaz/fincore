@@ -4,6 +4,8 @@ import 'package:fincore_app/features/accounts/data/datasources/account_mock_data
 import 'package:fincore_app/features/auth/data/datasources/auth_local_data_source.dart';
 import 'package:fincore_app/features/auth/domain/entities/auth_session.dart';
 import 'package:fincore_app/features/credit_cards/data/datasources/credit_card_mock_data_source.dart';
+import 'package:fincore_app/features/credit_cards/data/datasources/credit_card_statement_local_data_source.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
 import 'package:fincore_app/features/transactions/data/datasources/transaction_mock_data_source.dart';
 import 'package:fincore_app/features/transactions/data/datasources/recurring_expense_plan_local_data_source.dart';
 import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_plan.dart';
@@ -46,6 +48,9 @@ void main() {
           transactionDataSourceProvider.overrideWithValue(
             TransactionMockDataSource(),
           ),
+          creditCardStatementDataSourceProvider.overrideWithValue(
+            const _EmptyStatementDataSource(),
+          ),
           recurringExpensePlanDataSourceProvider.overrideWithValue(
             const _EmptyRecurringExpensePlanDataSource(),
           ),
@@ -79,6 +84,9 @@ void main() {
           ),
           transactionDataSourceProvider.overrideWithValue(
             TransactionMockDataSource(),
+          ),
+          creditCardStatementDataSourceProvider.overrideWithValue(
+            const _EmptyStatementDataSource(),
           ),
           recurringExpensePlanDataSourceProvider.overrideWithValue(
             const _EmptyRecurringExpensePlanDataSource(),
@@ -126,6 +134,18 @@ void main() {
     expect(find.text('Beklenmeyen bir hata oluştu.'), findsOneWidget);
     expect(find.text('Giriş Yap'), findsOneWidget);
   });
+}
+
+final class _EmptyStatementDataSource implements CreditCardStatementDataSource {
+  const _EmptyStatementDataSource();
+
+  @override
+  Future<List<CreditCardStatement>> getByCreditCardId(
+    String creditCardId,
+  ) async => const [];
+
+  @override
+  Future<void> insert(CreditCardStatement statement) async {}
 }
 
 final class _EmptyRecurringExpensePlanDataSource

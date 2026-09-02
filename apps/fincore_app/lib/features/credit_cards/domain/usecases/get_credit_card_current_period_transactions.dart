@@ -37,6 +37,7 @@ final class GetCreditCardCurrentPeriodTransactionsUseCase {
           !transaction.isCreditCardDebtPayment &&
           transaction.transactionType != TransactionType.transfer &&
           !transaction.transactionDate.isAfter(now) &&
+          !transaction.isInstallment &&
           !assignedIds.contains(transaction.id);
     }).toList();
     result.sort(

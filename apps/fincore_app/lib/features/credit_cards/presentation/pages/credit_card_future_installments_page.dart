@@ -4,7 +4,6 @@ import 'package:fincore_app/core/theme/app_spacing.dart';
 import 'package:fincore_app/core/widgets/app_card.dart';
 import 'package:fincore_app/core/widgets/app_empty_state.dart';
 import 'package:fincore_app/core/widgets/app_loading_view.dart';
-import 'package:fincore_app/features/credit_cards/domain/services/credit_card_period_calculator.dart';
 import 'package:fincore_app/features/credit_cards/presentation/constants/credit_card_strings.dart';
 import 'package:fincore_app/features/credit_cards/presentation/providers/credit_card_activity_summary_provider.dart';
 import 'package:fincore_app/features/credit_cards/presentation/providers/credit_card_balance_provider.dart';
@@ -35,10 +34,6 @@ final class CreditCardFutureInstallmentsPage extends ConsumerWidget {
           final installments = ref.watch(
             creditCardFutureInstallmentsProvider(creditCard.id),
           );
-          final cutoff = CreditCardPeriodCalculator.upcomingStatementDate(
-            referenceDate: DateTime.now(),
-            statementDay: creditCard.statementDay,
-          );
           return installments.when(
             loading: () => const AppLoadingView(),
             error: (error, stackTrace) => const Center(
@@ -67,7 +62,7 @@ final class CreditCardFutureInstallmentsPage extends ConsumerWidget {
                                     ).textTheme.titleMedium,
                                   ),
                                   Text(
-                                    '${AppFormatters.date(cutoff)} sonrasındaki '
+                                    'Henüz dönem içine yansımamış '
                                     '${items.length} taksit',
                                   ),
                                 ],

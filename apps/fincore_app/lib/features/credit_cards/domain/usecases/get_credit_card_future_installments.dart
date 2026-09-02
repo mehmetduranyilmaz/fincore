@@ -1,7 +1,6 @@
 import 'package:fincore_app/core/utils/turkish_text.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
-import 'package:fincore_app/features/credit_cards/domain/services/credit_card_period_calculator.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
@@ -20,10 +19,7 @@ final class GetCreditCardFutureInstallmentsUseCase {
   final CreditCardFutureInstallmentClock _clock;
 
   Future<List<Transaction>> execute(CreditCard creditCard) async {
-    final upcomingCutoff = CreditCardPeriodCalculator.upcomingStatementDate(
-      referenceDate: _clock(),
-      statementDay: creditCard.statementDay,
-    );
+    _clock();
     final statements = await _statementRepository.getByCreditCardId(
       creditCard.id,
     );
@@ -40,7 +36,6 @@ final class GetCreditCardFutureInstallmentsUseCase {
           transaction.paymentGroupId == null &&
           transaction.transactionType == TransactionType.expense &&
           transaction.isInstallment &&
-          transaction.transactionDate.isAfter(upcomingCutoff) &&
           !assignedIds.contains(transaction.id);
     }).toList();
     result.sort(_compare);

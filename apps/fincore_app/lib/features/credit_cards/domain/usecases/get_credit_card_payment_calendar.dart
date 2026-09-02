@@ -1,10 +1,14 @@
 import 'package:fincore_app/features/accounts/domain/repositories/account_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_payment_calendar.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/services/credit_card_period_calculator.dart';
 import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_occurrence.dart';
 import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_plan.dart';
+import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/recurring_expense_plan_repository.dart';
@@ -20,6 +24,7 @@ final class GetCreditCardPaymentCalendarUseCase {
     this._recurringExpensePlanRepository,
     this._accountRepository,
     this._customerRepository,
+    this._statementRepository,
     CreditCardPaymentCalendarClock? clock,
   }) : _clock = clock ?? DateTime.now;
 
@@ -28,6 +33,7 @@ final class GetCreditCardPaymentCalendarUseCase {
   final RecurringExpensePlanRepository? _recurringExpensePlanRepository;
   final AccountRepository? _accountRepository;
   final CustomerRepository? _customerRepository;
+  final CreditCardStatementRepository? _statementRepository;
   final CreditCardPaymentCalendarClock _clock;
 
   Future<CreditCardPaymentCalendar> execute() async {
@@ -41,11 +47,17 @@ final class GetCreditCardPaymentCalendarUseCase {
     final customerNames = {
       for (final customer in customers) customer.id: customer.name,
     };
-    final now = _clock();
-    final firstVisibleMonth = DateTime(now.year, now.month);
+    final firstVisibleMonth = DateTime(_clock().year - 100);
     final transactions = await _transactionRepository.getTransactions(
-      TransactionFilter(transactionTypes: const {TransactionType.expense}),
+      TransactionFilter(),
     );
+    final statementsByCard = <String, List<CreditCardStatement>>{};
+    if (_statementRepository != null) {
+      for (final card in creditCards) {
+        statementsByCard[card.id] = await _statementRepository
+            .getByCreditCardId(card.id);
+      }
+    }
     final existingTransactionIds = transactions.map((item) => item.id).toSet();
     final monthBuckets = <(int, int), _MonthBucket>{};
 
@@ -56,14 +68,20 @@ final class GetCreditCardPaymentCalendarUseCase {
           card == null ||
           transaction.isDeleted ||
           transaction.source == TransactionSource.recurringPlan ||
-          transaction.transactionType != TransactionType.expense ||
-          transaction.transactionDate.isBefore(firstVisibleMonth)) {
+          transaction.transactionType != TransactionType.expense) {
         continue;
       }
 
+      final period = CreditCardPeriodCalculator.transactionPeriod(
+        transactionId: transaction.id,
+        transactionDate: transaction.transactionDate,
+        statementDay: card.statementDay,
+        statements: statementsByCard[card.id] ?? const [],
+      );
+      if (period.isBefore(firstVisibleMonth)) continue;
       final bucket = monthBuckets.putIfAbsent((
-        transaction.transactionDate.year,
-        transaction.transactionDate.month,
+        period.year,
+        period.month,
       ), _MonthBucket.new);
       bucket.add(
         currencyCode: card.currencyCode,
@@ -71,11 +89,50 @@ final class GetCreditCardPaymentCalendarUseCase {
         detailKey: (CreditCardPaymentDetailKind.creditCard, card.id),
         detailLabel: _cardLabel(card),
         planned: false,
+        paid: false,
       );
+    }
+
+    for (final card in creditCards) {
+      for (final statement in statementsByCard[card.id] ?? const []) {
+        final period = DateTime(
+          statement.statementDate.year,
+          statement.statementDate.month,
+        );
+        if (period.isBefore(firstVisibleMonth)) continue;
+        final payments = transactions.where(
+          (transaction) =>
+              !transaction.isDeleted &&
+              transaction.isCreditCardDebtPayment &&
+              transaction.creditCardStatementId == statement.id,
+        );
+        final paidCents = payments.fold<int>(
+          0,
+          (sum, transaction) =>
+              sum + InstallmentCalculator.toCents(transaction.amount.abs()),
+        );
+        final bucket = monthBuckets[(period.year, period.month)];
+        bucket?.addPaid(
+          currencyCode: card.currencyCode,
+          cents: paidCents,
+          detailKey: (CreditCardPaymentDetailKind.creditCard, card.id),
+        );
+      }
     }
 
     final recurringPlans =
         await _recurringExpensePlanRepository?.getPlans() ?? const [];
+    final paidRecurringOccurrenceIds = _paidRecurringOccurrenceIds(
+      recurringPlans,
+      transactions,
+      {
+        for (final customer in customers)
+          customer.id: InstallmentCalculator.toCents(
+            customer.openingBalance < 0 ? -customer.openingBalance : 0,
+          ),
+      },
+      _clock(),
+    );
     for (final plan in recurringPlans) {
       final detail = _planDetail(
         plan,
@@ -101,6 +158,15 @@ final class GetCreditCardPaymentCalendarUseCase {
           detailKey: (detail.kind, detail.sourceId),
           detailLabel: detail.label,
           planned: !realized,
+          // Posting the due occurrence is not proof of payment. Historical
+          // customer payments are allocated FIFO to the customer's realized
+          // recurring obligations, independently of the payment month.
+          paid: paidRecurringOccurrenceIds.contains(
+            RecurringExpenseOccurrence.transactionId(
+              planId: plan.id,
+              dueDate: dueDate,
+            ),
+          ),
         );
       }
     }
@@ -125,6 +191,7 @@ final class GetCreditCardPaymentCalendarUseCase {
               kind: entry.key.$1,
               label: detail.label,
               totalsByCurrency: _toAmounts(detail.centsByCurrency),
+              paidByCurrency: _toAmounts(detail.paidCentsByCurrency),
               transactionCount: detail.transactionCount,
               plannedExpenseCount: detail.plannedExpenseCount,
             );
@@ -141,6 +208,7 @@ final class GetCreditCardPaymentCalendarUseCase {
               year: key.$1,
               month: key.$2,
               totalsByCurrency: _toAmounts(bucket.centsByCurrency),
+              paidByCurrency: _toAmounts(bucket.paidCentsByCurrency),
               transactionCount: bucket.transactionCount,
               plannedExpenseCount: bucket.plannedExpenseCount,
               details: details,
@@ -164,6 +232,72 @@ final class GetCreditCardPaymentCalendarUseCase {
           totalsByCurrency: _toAmounts(yearCents[entry.key]!),
         ),
     ]);
+  }
+
+  static Set<String> _paidRecurringOccurrenceIds(
+    List<RecurringExpensePlan> plans,
+    List<Transaction> transactions,
+    Map<String, int> openingPayableCentsByCustomer,
+    DateTime now,
+  ) {
+    final obligationsByCustomer = <String, List<_RecurringObligation>>{};
+    for (final plan in plans) {
+      final customerId = plan.customerId;
+      if (customerId == null) continue;
+      for (final dueDate in plan.dueDates) {
+        if (dueDate.isAfter(now)) break;
+        obligationsByCustomer
+            .putIfAbsent(customerId, () => [])
+            .add(
+              _RecurringObligation(
+                id: RecurringExpenseOccurrence.transactionId(
+                  planId: plan.id,
+                  dueDate: dueDate,
+                ),
+                dueDate: dueDate,
+                cents: InstallmentCalculator.toCents(plan.amount),
+              ),
+            );
+      }
+    }
+
+    final result = <String>{};
+    for (final entry in obligationsByCustomer.entries) {
+      final obligations = entry.value
+        ..sort((left, right) => left.dueDate.compareTo(right.dueDate));
+      if (obligations.isEmpty) continue;
+      var availablePaymentCents = transactions
+          .where(
+            (transaction) =>
+                !transaction.isDeleted &&
+                transaction.customerId == entry.key &&
+                transaction.isCustomerPayment &&
+                transaction.customerBalanceDelta! > 0 &&
+                !transaction.transactionDate.isBefore(
+                  obligations.first.dueDate,
+                ),
+          )
+          .fold<int>(
+            0,
+            (sum, transaction) =>
+                sum + InstallmentCalculator.toCents(transaction.amount.abs()),
+          );
+      // A customer payment settles the balance in chronological order. Consume
+      // any payable opening balance before allocating it to recurring items;
+      // otherwise a historical account-closing payment can incorrectly mark a
+      // later month's occurrence as paid.
+      final openingPayableCents =
+          openingPayableCentsByCustomer[entry.key] ?? 0;
+      availablePaymentCents = availablePaymentCents > openingPayableCents
+          ? availablePaymentCents - openingPayableCents
+          : 0;
+      for (final obligation in obligations) {
+        if (availablePaymentCents < obligation.cents) break;
+        availablePaymentCents -= obligation.cents;
+        result.add(obligation.id);
+      }
+    }
+    return result;
   }
 
   static _PlanDetail _planDetail(
@@ -209,6 +343,7 @@ final class GetCreditCardPaymentCalendarUseCase {
 
 final class _MonthBucket {
   final Map<String, int> centsByCurrency = {};
+  final Map<String, int> paidCentsByCurrency = {};
   final Map<(CreditCardPaymentDetailKind, String), _DetailBucket> details = {};
   int transactionCount = 0;
   int plannedExpenseCount = 0;
@@ -219,6 +354,7 @@ final class _MonthBucket {
     required (CreditCardPaymentDetailKind, String) detailKey,
     required String detailLabel,
     required bool planned,
+    required bool paid,
   }) {
     final cents = InstallmentCalculator.toCents(amount.abs());
     transactionCount++;
@@ -230,7 +366,34 @@ final class _MonthBucket {
     );
     details
         .putIfAbsent(detailKey, () => _DetailBucket(detailLabel))
-        .add(currencyCode: currencyCode, cents: cents, planned: planned);
+        .add(
+          currencyCode: currencyCode,
+          cents: cents,
+          planned: planned,
+          paid: paid,
+        );
+    if (paid) {
+      paidCentsByCurrency.update(
+        currencyCode,
+        (value) => value + cents,
+        ifAbsent: () => cents,
+      );
+    }
+  }
+
+  void addPaid({
+    required String currencyCode,
+    required int cents,
+    required (CreditCardPaymentDetailKind, String) detailKey,
+  }) {
+    if (cents <= 0 || !details.containsKey(detailKey)) return;
+    final capped = cents.clamp(0, centsByCurrency[currencyCode] ?? 0);
+    paidCentsByCurrency.update(
+      currencyCode,
+      (value) => (value + capped).clamp(0, centsByCurrency[currencyCode] ?? 0),
+      ifAbsent: () => capped,
+    );
+    details[detailKey]!.addPaid(currencyCode: currencyCode, cents: cents);
   }
 }
 
@@ -239,6 +402,7 @@ final class _DetailBucket {
 
   final String label;
   final Map<String, int> centsByCurrency = {};
+  final Map<String, int> paidCentsByCurrency = {};
   int transactionCount = 0;
   int plannedExpenseCount = 0;
 
@@ -246,6 +410,7 @@ final class _DetailBucket {
     required String currencyCode,
     required int cents,
     required bool planned,
+    required bool paid,
   }) {
     transactionCount++;
     if (planned) plannedExpenseCount++;
@@ -254,7 +419,36 @@ final class _DetailBucket {
       (value) => value + cents,
       ifAbsent: () => cents,
     );
+    if (paid) {
+      paidCentsByCurrency.update(
+        currencyCode,
+        (value) => value + cents,
+        ifAbsent: () => cents,
+      );
+    }
   }
+
+  void addPaid({required String currencyCode, required int cents}) {
+    final total = centsByCurrency[currencyCode] ?? 0;
+    if (cents <= 0 || total <= 0) return;
+    paidCentsByCurrency.update(
+      currencyCode,
+      (value) => (value + cents).clamp(0, total),
+      ifAbsent: () => cents.clamp(0, total),
+    );
+  }
+}
+
+final class _RecurringObligation {
+  const _RecurringObligation({
+    required this.id,
+    required this.dueDate,
+    required this.cents,
+  });
+
+  final String id;
+  final DateTime dueDate;
+  final int cents;
 }
 
 final class _PlanDetail {

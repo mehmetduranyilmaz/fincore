@@ -1,7 +1,6 @@
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_activity_summary.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
-import 'package:fincore_app/features/credit_cards/domain/services/credit_card_period_calculator.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
@@ -21,10 +20,6 @@ final class GetCreditCardActivitySummaryUseCase {
 
   Future<CreditCardActivitySummary> execute(CreditCard creditCard) async {
     final now = _dateOnly(_clock());
-    final upcomingCutoff = CreditCardPeriodCalculator.upcomingStatementDate(
-      referenceDate: now,
-      statementDay: creditCard.statementDay,
-    );
     final transactions = await _repository.getTransactions(
       TransactionFilter(creditCardId: creditCard.id),
     );
@@ -39,9 +34,26 @@ final class GetCreditCardActivitySummaryUseCase {
         .map((line) => line.transactionId)
         .toSet();
 
-    final statementAmount = statements.isEmpty
+    final latestStatement = statements.firstOrNull;
+    final statementPayments = latestStatement == null
         ? 0.0
-        : statements.first.totalAmount;
+        : transactions
+              .where(
+                (transaction) =>
+                    !transaction.isDeleted &&
+                    transaction.isCreditCardDebtPayment &&
+                    transaction.creditCardStatementId == latestStatement.id,
+              )
+              .fold(
+                0.0,
+                (total, transaction) => total + transaction.amount.abs(),
+              );
+    final statementAmount = latestStatement == null
+        ? 0.0
+        : (latestStatement.totalAmount - statementPayments).clamp(
+            0.0,
+            double.infinity,
+          );
     var currentPeriodAmount = 0.0;
     var futureInstallmentAmount = 0.0;
     for (final transaction in transactions) {
@@ -51,13 +63,13 @@ final class GetCreditCardActivitySummaryUseCase {
       final signedAmount = _signedAmount(transaction);
       if (!transaction.isCreditCardDebtPayment &&
           !assignedIds.contains(transaction.id) &&
-          !transaction.transactionDate.isAfter(now)) {
+          !transaction.transactionDate.isAfter(now) &&
+          !transaction.isInstallment) {
         currentPeriodAmount += signedAmount;
       }
       if (transaction.isInstallment &&
           transaction.paymentGroupId == null &&
           transaction.transactionType == TransactionType.expense &&
-          transaction.transactionDate.isAfter(upcomingCutoff) &&
           !assignedIds.contains(transaction.id)) {
         futureInstallmentAmount += transaction.amount.abs();
       }

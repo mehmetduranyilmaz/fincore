@@ -3,6 +3,8 @@ import 'package:fincore_app/features/accounts/domain/entities/account_type.dart'
 import 'package:fincore_app/features/accounts/domain/repositories/account_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
+import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/usecases/get_credit_card_payment_calendar.dart';
 import 'package:fincore_app/features/customers/domain/entities/customer.dart';
 import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
@@ -52,17 +54,17 @@ void main() {
       '2025-11',
       '2025-12',
     ]);
-    expect(year2025.months.first.totalsByCurrency, {'TRY': 100, 'USD': 20});
-    expect(year2025.months.first.transactionCount, 2);
+    expect(year2025.months[0].totalsByCurrency, {'TRY': 1099, 'USD': 20});
+    expect(year2025.months[0].transactionCount, 3);
     expect(year2025.months[1].totalsByCurrency, {'TRY': 90});
     expect(year2025.months[1].confirmedTransactionCount, 1);
     expect(year2025.months[1].plannedExpenseCount, 1);
-    expect(year2025.months.first.details, hasLength(2));
+    expect(year2025.months[0].details, hasLength(2));
     expect(
       year2025.months[1].details.map((detail) => detail.label),
       containsAll(['Kredi Kartı • Akbank Axess • ****0349', 'Hesap • TL Kasa']),
     );
-    expect(year2025.totalsByCurrency, {'TRY': 255, 'USD': 20});
+    expect(year2025.totalsByCurrency, {'TRY': 1254, 'USD': 20});
     expect(calendar.years.last.months.single.periodLabel, '2026-01');
     expect(calendar.years.last.totalsByCurrency, {'TRY': 50});
   });
@@ -92,62 +94,144 @@ void main() {
     expect(month.details.single.label, 'Kredi Kartı • Akbank Axess • ****0349');
   });
 
-  test(
-    'shows a realized customer plan once as confirmed and future as planned',
-    () async {
-      final plan = RecurringExpensePlan(
-        id: 'customer-plan',
-        accountId: null,
-        creditCardId: null,
-        customerId: 'customer-1',
-        amount: 500,
-        description: 'Eğitim gideri',
-        categoryId: 'education',
-        currencyCode: 'TRY',
-        firstDueDate: DateTime(2025, 10, 5),
-        occurrenceCount: 2,
-      );
-      final realizedId = RecurringExpenseOccurrence.transactionId(
-        planId: plan.id,
-        dueDate: DateTime(2025, 10, 5),
-      );
-      final useCase = GetCreditCardPaymentCalendarUseCase(
-        const _CreditCardRepository(),
-        _TransactionRepository([
-          Transaction(
-            id: realizedId,
-            accountId: null,
-            creditCardId: null,
-            amount: 500,
-            transactionType: TransactionType.expense,
-            categoryId: 'education',
-            merchant: 'Eğitim gideri',
-            note: null,
-            transactionDate: DateTime(2025, 10, 5),
-            source: TransactionSource.recurringPlan,
-            isDeleted: false,
-            customerId: 'customer-1',
-            customerBalanceDelta: -500,
+  test('uses statement debt payments as real monthly progress', () async {
+    final statement = CreditCardStatement(
+      id: 'statement-1',
+      creditCardId: 'try-card',
+      statementDate: DateTime(2025, 8, 30),
+      dueDate: DateTime(2025, 9, 10),
+      createdAt: DateTime(2025, 8, 30, 18),
+      lines: [
+        CreditCardStatementLine(
+          transactionId: 'charge',
+          description: 'Alışveriş',
+          transactionDate: DateTime(2025, 8, 10),
+          amount: 100,
+        ),
+      ],
+    );
+    final payment = Transaction(
+      id: 'payment',
+      accountId: null,
+      creditCardId: 'try-card',
+      amount: 50,
+      transactionType: TransactionType.income,
+      categoryId: null,
+      merchant: 'Ekstre ödemesi',
+      note: null,
+      transactionDate: DateTime(2025, 9, 2),
+      source: TransactionSource.manual,
+      isDeleted: false,
+      paymentGroupId: 'payment-group',
+      creditCardStatementId: statement.id,
+    );
+    final calendar = await GetCreditCardPaymentCalendarUseCase(
+      const _CreditCardRepository(),
+      _TransactionRepository([
+        _expense('charge', 'try-card', 100, DateTime(2025, 8, 10)),
+        payment,
+      ]),
+      statementRepository: _StatementRepository([statement]),
+      clock: () => DateTime(2025, 9, 2),
+    ).execute();
+
+    final august = calendar.years.single.months.single;
+    expect(august.periodLabel, '2025-08');
+    expect(august.paidByCurrency, {'TRY': 50});
+    expect(august.completionRatio, 0.5);
+    expect(august.remainingByCurrency, {'TRY': 50});
+  });
+
+  test('keeps paid August checked and unpaid September unchecked', () async {
+    final plan = RecurringExpensePlan(
+      id: 'customer-plan',
+      accountId: null,
+      creditCardId: null,
+      customerId: 'customer-1',
+      amount: 500,
+      description: 'Eğitim gideri',
+      categoryId: 'education',
+      currencyCode: 'TRY',
+      firstDueDate: DateTime(2026, 8, 1),
+      occurrenceCount: 2,
+    );
+    final realizedId = RecurringExpenseOccurrence.transactionId(
+      planId: plan.id,
+      dueDate: DateTime(2026, 8, 1),
+    );
+    final useCase = GetCreditCardPaymentCalendarUseCase(
+      const _CreditCardRepository(),
+      _TransactionRepository([
+        Transaction(
+          id: realizedId,
+          accountId: null,
+          creditCardId: null,
+          amount: 500,
+          transactionType: TransactionType.expense,
+          categoryId: 'education',
+          merchant: 'Eğitim gideri',
+          note: null,
+          transactionDate: DateTime(2026, 8, 1),
+          source: TransactionSource.recurringPlan,
+          isDeleted: false,
+          customerId: 'customer-1',
+          customerBalanceDelta: -500,
+        ),
+        Transaction(
+          id: RecurringExpenseOccurrence.transactionId(
+            planId: plan.id,
+            dueDate: DateTime(2026, 9, 1),
           ),
-        ]),
-        recurringExpensePlanRepository: _RecurringExpensePlanRepository([plan]),
-        customerRepository: const _CustomerRepository(),
-        clock: () => DateTime(2025, 10, 8),
-      );
+          accountId: null,
+          creditCardId: null,
+          amount: 500,
+          transactionType: TransactionType.expense,
+          categoryId: 'education',
+          merchant: 'Eğitim gideri',
+          note: null,
+          transactionDate: DateTime(2026, 9, 1),
+          source: TransactionSource.recurringPlan,
+          isDeleted: false,
+          customerId: 'customer-1',
+          customerBalanceDelta: -500,
+        ),
+        Transaction(
+          id: 'customer-plan-payment',
+          accountId: 'account-1',
+          creditCardId: null,
+          amount: -3500,
+          transactionType: TransactionType.transfer,
+          categoryId: null,
+          merchant: 'Plan payment',
+          note: null,
+          transactionDate: DateTime(2026, 8, 31),
+          source: TransactionSource.manual,
+          isDeleted: false,
+          paymentGroupId: 'customer-plan-payment-group',
+          customerId: 'customer-1',
+          customerBalanceDelta: 3500,
+        ),
+      ]),
+      recurringExpensePlanRepository: _RecurringExpensePlanRepository([plan]),
+      customerRepository: const _CustomerRepository(),
+      clock: () => DateTime(2026, 9, 2),
+    );
 
-      final calendar = await useCase.execute();
-      final october = calendar.years.single.months.first;
-      final november = calendar.years.single.months.last;
+    final calendar = await useCase.execute();
+    final august = calendar.years.single.months.first;
+    final september = calendar.years.single.months.last;
 
-      expect(october.totalsByCurrency, {'TRY': 500});
-      expect(october.confirmedTransactionCount, 1);
-      expect(october.plannedExpenseCount, 0);
-      expect(october.details.single.label, 'Müşteri • Mehmet Eğitim');
-      expect(october.details.single.confirmedTransactionCount, 1);
-      expect(november.plannedExpenseCount, 1);
-      expect(november.details.single.plannedExpenseCount, 1);
-    },
-  );
+    expect(august.periodLabel, '2026-08');
+    expect(august.paidByCurrency, {'TRY': 500});
+    expect(august.isPaid, isTrue);
+    expect(august.details.single.isPaid, isTrue);
+    expect(september.periodLabel, '2026-09');
+    expect(september.confirmedTransactionCount, 1);
+    expect(september.plannedExpenseCount, 0);
+    expect(september.paidByCurrency, isEmpty);
+    expect(september.isPaid, isFalse);
+    expect(september.details.single.isPaid, isFalse);
+  });
 }
 
 final class _AccountRepository implements AccountRepository {
@@ -303,4 +387,17 @@ final class _TransactionRepository implements TransactionRepository {
 
   @override
   Future<void> update(Transaction transaction) async {}
+}
+
+final class _StatementRepository implements CreditCardStatementRepository {
+  const _StatementRepository(this.items);
+  final List<CreditCardStatement> items;
+
+  @override
+  Future<void> create(CreditCardStatement statement) async {}
+
+  @override
+  Future<List<CreditCardStatement>> getByCreditCardId(
+    String creditCardId,
+  ) async => items.where((item) => item.creditCardId == creditCardId).toList();
 }

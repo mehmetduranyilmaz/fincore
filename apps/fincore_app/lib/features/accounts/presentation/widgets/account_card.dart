@@ -15,12 +15,14 @@ final class AccountCard extends ConsumerWidget {
     required this.account,
     required this.onEdit,
     required this.onDelete,
+    required this.onTap,
     super.key,
   });
 
   final Account account;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -28,6 +30,7 @@ final class AccountCard extends ConsumerWidget {
     final balance = ref.watch(accountBalanceProvider(account.id));
 
     return design_system.AppCard(
+      onTap: onTap,
       child: LayoutBuilder(
         builder: (context, constraints) {
           final details = _AccountDetails(
