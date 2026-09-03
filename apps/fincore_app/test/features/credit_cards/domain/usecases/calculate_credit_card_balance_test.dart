@@ -67,7 +67,7 @@ void main() {
   });
 
   test(
-    'separates statement and current debt from installment limit exposure',
+    'moves a due installment into current debt while preserving limit exposure',
     () async {
       final statementExpense = _transaction(
         id: 'statement-expense',
@@ -122,7 +122,7 @@ void main() {
 
       final result = await useCase.execute(_creditCard.id);
 
-      expect(result.currentDebt, 500);
+      expect(result.currentDebt, 2500);
       expect(result.availableLimit, 7500);
     },
   );

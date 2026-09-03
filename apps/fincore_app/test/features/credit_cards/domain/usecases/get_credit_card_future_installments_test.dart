@@ -33,7 +33,7 @@ void main() {
     expect(result.fold<double>(0, (total, item) => total + item.amount), 4000);
   });
 
-  test('sorts by Turkish description then installment sequence', () async {
+  test('sorts by date with the nearest installment first', () async {
     final useCase = GetCreditCardFutureInstallmentsUseCase(
       _TransactionRepository([
         _installment('telefon-4', 'Telefon', DateTime(2026, 11, 15), 4),
@@ -49,8 +49,8 @@ void main() {
 
     expect(result.map((item) => item.id), [
       'ayakkabi-2',
-      'ayakkabi-3',
       'telefon-2',
+      'ayakkabi-3',
       'telefon-4',
     ]);
   });
@@ -61,7 +61,7 @@ void main() {
       final installment = _installment(
         'september-installment',
         'Telefon',
-        DateTime(2026, 9, 2),
+        DateTime(2026, 10, 2),
         2,
       );
       final statement = CreditCardStatement(

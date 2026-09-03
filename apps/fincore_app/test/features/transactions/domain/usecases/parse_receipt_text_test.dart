@@ -26,6 +26,27 @@ GENEL TOPLAM 1.234,56 TL
     expect(result.installmentCount, 3);
     expect(result.suggestedCategoryId, 'category-grocery');
   });
+
+  test('reads labelled date, market name, and a singly masked card', () async {
+    const receipt = '''
+KARATAŞ MAH. 449 CAD. NO: 36/A
+ÇALIŞTIR MARKET
+NUR YAMANLI
+ŞAHİNBEY / GAZİANTEP
+TARİH: 21-07-2026
+İŞYERİ NO: 202014979
+Kredi Kartı *3420
+TOPLAM 417,00 TL
+''';
+
+    final result = await ParseReceiptTextUseCase(
+      const _CategoryRepository(),
+    ).execute(receipt);
+
+    expect(result.transactionDate, DateTime(2026, 7, 21));
+    expect(result.description, 'ÇALIŞTIR MARKET');
+    expect(result.lastFourDigits, '3420');
+  });
 }
 
 final class _CategoryRepository implements CategoryRepository {

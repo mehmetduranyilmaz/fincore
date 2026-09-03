@@ -43,15 +43,47 @@ void main() {
       );
 
       expect(movements.map((item) => item.transaction.id), [
-        'transfer-in',
         'payment',
+        'transfer-in',
       ]);
       expect(movements.map((item) => item.balanceAfterMovement), [
-        14000,
         13000,
+        14000,
       ]);
     },
   );
+
+  test('keeps same-day movements in their creation order', () async {
+    final useCase = GetAccountMovementsUseCase(
+      _Transactions([
+        _transaction(
+          'manual-income-1788400000000000',
+          DateTime(2026, 9, 2),
+          40000,
+          TransactionType.income,
+        ),
+        _transaction(
+          'card-payment-1788400001000000-0',
+          DateTime(2026, 9, 2),
+          -30000,
+          TransactionType.transfer,
+        ),
+      ]),
+      const _Accounts(),
+    );
+
+    final movements = await useCase.execute(
+      accountId: 'account-1',
+      startDate: DateTime(2026, 9, 2),
+      endDate: DateTime(2026, 9, 2, 23, 59, 59),
+    );
+
+    expect(movements.map((item) => item.transaction.id), [
+      'manual-income-1788400000000000',
+      'card-payment-1788400001000000-0',
+    ]);
+    expect(movements.map((item) => item.balanceAfterMovement), [50000, 20000]);
+  });
 }
 
 Transaction _transaction(

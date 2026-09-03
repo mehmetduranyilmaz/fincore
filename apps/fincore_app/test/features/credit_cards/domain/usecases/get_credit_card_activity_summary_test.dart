@@ -104,46 +104,44 @@ void main() {
     expect(summary.statementAmount, closeTo(30000, 0.001));
   });
 
-  test('shows zero for a fully paid latest statement', () async {
-    final repository = TransactionRepositoryImpl(
-      TransactionMockDataSource(
-        initialTransactions: [
-          _expense('statement', DateTime(2026, 8, 5), 30004.21),
-          _cardDebtPayment(
-            'full-payment',
-            DateTime(2026, 9, 1),
-            30004.21,
-            statementId: 'statement-1',
-          ),
-        ],
-      ),
-    );
-    final useCase = GetCreditCardActivitySummaryUseCase(
-      repository,
-      statementRepository: _StatementRepository([
-        CreditCardStatement(
-          id: 'statement-1',
-          creditCardId: _card.id,
-          statementDate: DateTime(2026, 8, 30),
-          dueDate: DateTime(2026, 9, 10),
-          createdAt: DateTime(2026, 8, 30),
-          lines: [
-            CreditCardStatementLine(
-              transactionId: 'statement',
-              description: 'statement',
-              transactionDate: DateTime(2026, 8, 5),
-              amount: 30004.21,
-            ),
+  test(
+    'shows zero when an unlinked payment fully covers the oldest statement',
+    () async {
+      final repository = TransactionRepositoryImpl(
+        TransactionMockDataSource(
+          initialTransactions: [
+            _expense('statement', DateTime(2026, 8, 5), 30004.21),
+            _cardDebtPayment('full-payment', DateTime(2026, 9, 1), 30004.21),
           ],
         ),
-      ]),
-      clock: () => DateTime(2026, 9, 1),
-    );
+      );
+      final useCase = GetCreditCardActivitySummaryUseCase(
+        repository,
+        statementRepository: _StatementRepository([
+          CreditCardStatement(
+            id: 'statement-1',
+            creditCardId: _card.id,
+            statementDate: DateTime(2026, 8, 30),
+            dueDate: DateTime(2026, 9, 10),
+            createdAt: DateTime(2026, 8, 30),
+            lines: [
+              CreditCardStatementLine(
+                transactionId: 'statement',
+                description: 'statement',
+                transactionDate: DateTime(2026, 8, 5),
+                amount: 30004.21,
+              ),
+            ],
+          ),
+        ]),
+        clock: () => DateTime(2026, 9, 1),
+      );
 
-    final summary = await useCase.execute(_card);
+      final summary = await useCase.execute(_card);
 
-    expect(summary.statementAmount, 0);
-  });
+      expect(summary.statementAmount, 0);
+    },
+  );
 
   test(
     'future total includes later installments in the current month',

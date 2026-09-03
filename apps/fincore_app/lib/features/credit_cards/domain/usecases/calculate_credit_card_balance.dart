@@ -2,6 +2,7 @@ import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.da
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_balance.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/services/credit_card_statement_payment_allocator.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
 
@@ -77,15 +78,12 @@ final class CalculateCreditCardBalanceUseCase {
         .map((line) => line.transactionId)
         .toSet();
     var currentDebt = 0.0;
+    final paidByStatement = CreditCardStatementPaymentAllocator.allocate(
+      statements: statements,
+      transactions: transactions,
+    );
     for (final statement in statements) {
-      final paid = transactions
-          .where(
-            (transaction) =>
-                !transaction.isDeleted &&
-                transaction.isCreditCardDebtPayment &&
-                transaction.creditCardStatementId == statement.id,
-          )
-          .fold<double>(0, (sum, item) => sum + item.amount.abs());
+      final paid = paidByStatement[statement.id] ?? 0.0;
       currentDebt += (statement.totalAmount - paid).clamp(0.0, double.infinity);
     }
     final now = _clock();
@@ -93,7 +91,6 @@ final class CalculateCreditCardBalanceUseCase {
       if (transaction.isDeleted ||
           transaction.creditCardId != creditCardId ||
           assignedIds.contains(transaction.id) ||
-          transaction.isInstallment ||
           transaction.isCreditCardDebtPayment ||
           transaction.transactionDate.isAfter(now)) {
         continue;

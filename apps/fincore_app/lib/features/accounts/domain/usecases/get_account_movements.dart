@@ -29,7 +29,11 @@ final class GetAccountMovementsUseCase {
             .toList()
           ..sort((left, right) {
             final date = left.transactionDate.compareTo(right.transactionDate);
-            return date != 0 ? date : left.id.compareTo(right.id);
+            if (date != 0) return date;
+            final created = _createdOrder(
+              left.id,
+            ).compareTo(_createdOrder(right.id));
+            return created != 0 ? created : left.id.compareTo(right.id);
           });
 
     var balance = account.openingBalance;
@@ -50,6 +54,13 @@ final class GetAccountMovementsUseCase {
         );
       }
     }
-    return List.unmodifiable(result.reversed);
+    // The statement stays in the same chronological order used to calculate
+    // each running balance: oldest at the top, newest at the bottom.
+    return List.unmodifiable(result);
+  }
+
+  static int _createdOrder(String id) {
+    final match = RegExp(r'\d{13,}').firstMatch(id);
+    return int.tryParse(match?.group(0) ?? '') ?? 0;
   }
 }

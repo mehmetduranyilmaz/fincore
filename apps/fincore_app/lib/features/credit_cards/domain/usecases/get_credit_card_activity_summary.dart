@@ -1,6 +1,7 @@
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card.dart';
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_activity_summary.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/services/credit_card_statement_payment_allocator.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
@@ -35,19 +36,13 @@ final class GetCreditCardActivitySummaryUseCase {
         .toSet();
 
     final latestStatement = statements.firstOrNull;
+    final paidByStatement = CreditCardStatementPaymentAllocator.allocate(
+      statements: statements,
+      transactions: transactions,
+    );
     final statementPayments = latestStatement == null
         ? 0.0
-        : transactions
-              .where(
-                (transaction) =>
-                    !transaction.isDeleted &&
-                    transaction.isCreditCardDebtPayment &&
-                    transaction.creditCardStatementId == latestStatement.id,
-              )
-              .fold(
-                0.0,
-                (total, transaction) => total + transaction.amount.abs(),
-              );
+        : paidByStatement[latestStatement.id] ?? 0.0;
     final statementAmount = latestStatement == null
         ? 0.0
         : (latestStatement.totalAmount - statementPayments).clamp(
@@ -63,13 +58,13 @@ final class GetCreditCardActivitySummaryUseCase {
       final signedAmount = _signedAmount(transaction);
       if (!transaction.isCreditCardDebtPayment &&
           !assignedIds.contains(transaction.id) &&
-          !transaction.transactionDate.isAfter(now) &&
-          !transaction.isInstallment) {
+          !transaction.transactionDate.isAfter(now)) {
         currentPeriodAmount += signedAmount;
       }
       if (transaction.isInstallment &&
           transaction.paymentGroupId == null &&
           transaction.transactionType == TransactionType.expense &&
+          transaction.transactionDate.isAfter(now) &&
           !assignedIds.contains(transaction.id)) {
         futureInstallmentAmount += transaction.amount.abs();
       }

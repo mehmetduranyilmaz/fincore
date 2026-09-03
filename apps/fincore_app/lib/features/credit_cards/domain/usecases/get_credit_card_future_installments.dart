@@ -19,7 +19,7 @@ final class GetCreditCardFutureInstallmentsUseCase {
   final CreditCardFutureInstallmentClock _clock;
 
   Future<List<Transaction>> execute(CreditCard creditCard) async {
-    _clock();
+    final now = _dateOnly(_clock());
     final statements = await _statementRepository.getByCreditCardId(
       creditCard.id,
     );
@@ -36,6 +36,7 @@ final class GetCreditCardFutureInstallmentsUseCase {
           transaction.paymentGroupId == null &&
           transaction.transactionType == TransactionType.expense &&
           transaction.isInstallment &&
+          transaction.transactionDate.isAfter(now) &&
           !assignedIds.contains(transaction.id);
     }).toList();
     result.sort(_compare);
@@ -43,6 +44,10 @@ final class GetCreditCardFutureInstallmentsUseCase {
   }
 
   static int _compare(Transaction left, Transaction right) {
+    final dateComparison = left.transactionDate.compareTo(
+      right.transactionDate,
+    );
+    if (dateComparison != 0) return dateComparison;
     final descriptionComparison = TurkishText.compare(
       left.merchant,
       right.merchant,
@@ -52,6 +57,9 @@ final class GetCreditCardFutureInstallmentsUseCase {
       right.installmentNumber ?? 0,
     );
     if (installmentComparison != 0) return installmentComparison;
-    return left.transactionDate.compareTo(right.transactionDate);
+    return left.id.compareTo(right.id);
   }
+
+  static DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
 }

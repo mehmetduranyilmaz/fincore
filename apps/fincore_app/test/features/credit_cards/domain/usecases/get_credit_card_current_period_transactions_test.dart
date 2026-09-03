@@ -24,7 +24,7 @@ void main() {
   );
 
   test(
-    'keeps an unassigned installment out of period even when its date arrives',
+    'moves an unassigned installment into period when its date arrives',
     () async {
       final installment = Transaction(
         id: 'september-installment',
@@ -55,7 +55,7 @@ void main() {
       );
 
       expect(await before.execute('card-1'), isEmpty);
-      expect(await onDate.execute('card-1'), isEmpty);
+      expect((await onDate.execute('card-1')).single.id, installment.id);
     },
   );
 }

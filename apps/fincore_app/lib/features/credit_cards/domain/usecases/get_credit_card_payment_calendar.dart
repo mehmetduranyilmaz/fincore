@@ -5,6 +5,7 @@ import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_st
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/credit_cards/domain/services/credit_card_period_calculator.dart';
+import 'package:fincore_app/features/credit_cards/domain/services/credit_card_statement_payment_allocator.dart';
 import 'package:fincore_app/features/customers/domain/repositories/customer_repository.dart';
 import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_occurrence.dart';
 import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_plan.dart';
@@ -59,6 +60,15 @@ final class GetCreditCardPaymentCalendarUseCase {
       }
     }
     final existingTransactionIds = transactions.map((item) => item.id).toSet();
+    final paidByStatement = <String, double>{};
+    for (final statements in statementsByCard.values) {
+      paidByStatement.addAll(
+        CreditCardStatementPaymentAllocator.allocate(
+          statements: statements,
+          transactions: transactions,
+        ),
+      );
+    }
     final monthBuckets = <(int, int), _MonthBucket>{};
 
     for (final transaction in transactions) {
@@ -100,16 +110,8 @@ final class GetCreditCardPaymentCalendarUseCase {
           statement.statementDate.month,
         );
         if (period.isBefore(firstVisibleMonth)) continue;
-        final payments = transactions.where(
-          (transaction) =>
-              !transaction.isDeleted &&
-              transaction.isCreditCardDebtPayment &&
-              transaction.creditCardStatementId == statement.id,
-        );
-        final paidCents = payments.fold<int>(
-          0,
-          (sum, transaction) =>
-              sum + InstallmentCalculator.toCents(transaction.amount.abs()),
+        final paidCents = InstallmentCalculator.toCents(
+          paidByStatement[statement.id] ?? 0,
         );
         final bucket = monthBuckets[(period.year, period.month)];
         bucket?.addPaid(
@@ -122,17 +124,13 @@ final class GetCreditCardPaymentCalendarUseCase {
 
     final recurringPlans =
         await _recurringExpensePlanRepository?.getPlans() ?? const [];
-    final paidRecurringOccurrenceIds = _paidRecurringOccurrenceIds(
-      recurringPlans,
-      transactions,
-      {
-        for (final customer in customers)
-          customer.id: InstallmentCalculator.toCents(
-            customer.openingBalance < 0 ? -customer.openingBalance : 0,
-          ),
-      },
-      _clock(),
-    );
+    final paidRecurringOccurrenceIds =
+        _paidRecurringOccurrenceIds(recurringPlans, transactions, {
+          for (final customer in customers)
+            customer.id: InstallmentCalculator.toCents(
+              customer.openingBalance < 0 ? -customer.openingBalance : 0,
+            ),
+        }, _clock());
     for (final plan in recurringPlans) {
       final detail = _planDetail(
         plan,
@@ -286,8 +284,7 @@ final class GetCreditCardPaymentCalendarUseCase {
       // any payable opening balance before allocating it to recurring items;
       // otherwise a historical account-closing payment can incorrectly mark a
       // later month's occurrence as paid.
-      final openingPayableCents =
-          openingPayableCentsByCustomer[entry.key] ?? 0;
+      final openingPayableCents = openingPayableCentsByCustomer[entry.key] ?? 0;
       availablePaymentCents = availablePaymentCents > openingPayableCents
           ? availablePaymentCents - openingPayableCents
           : 0;

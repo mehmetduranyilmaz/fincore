@@ -1,5 +1,6 @@
 import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement_payment_status.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
+import 'package:fincore_app/features/credit_cards/domain/services/credit_card_statement_payment_allocator.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
 
 final class GetCreditCardStatementPaymentStatusUseCase {
@@ -30,14 +31,12 @@ final class GetCreditCardStatementPaymentStatusUseCase {
     final transactions = await _transactionRepository.getTransactions(
       TransactionFilter(creditCardId: creditCardId),
     );
-    final paidAmount = transactions
-        .where(
-          (transaction) =>
-              !transaction.isDeleted &&
-              transaction.isCreditCardDebtPayment &&
-              transaction.creditCardStatementId == statementId,
-        )
-        .fold(0.0, (total, transaction) => total + transaction.amount.abs());
+    final paidAmount =
+        CreditCardStatementPaymentAllocator.allocate(
+          statements: statements,
+          transactions: transactions,
+        )[statementId] ??
+        0.0;
     return CreditCardStatementPaymentStatus(
       statement: statement,
       paidAmount: paidAmount,

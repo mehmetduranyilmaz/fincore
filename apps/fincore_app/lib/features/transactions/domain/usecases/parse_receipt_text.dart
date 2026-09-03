@@ -74,6 +74,19 @@ final class ParseReceiptTextUseCase {
   }
 
   static DateTime? _extractDate(String text) {
+    final labelledDate = RegExp(
+      r'(?:TAR[Iİ]H|DATE)\s*[:.;-]?\s*'
+      r'(0?[1-9]|[12]\d|3[01])[./-](0?[1-9]|1[0-2])[./-](20\d{2})',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (labelledDate != null) {
+      return _safeDate(
+        int.parse(labelledDate.group(3)!),
+        int.parse(labelledDate.group(2)!),
+        int.parse(labelledDate.group(1)!),
+      );
+    }
+
     final dayFirst = RegExp(
       r'\b(0?[1-9]|[12]\d|3[01])[./-](0?[1-9]|1[0-2])[./-](20\d{2})\b',
     ).firstMatch(text);
@@ -108,7 +121,7 @@ final class ParseReceiptTextUseCase {
   static String? _extractLastFourDigits(String text) {
     final patterns = [
       RegExp(r'(?:SON\s*4|KART\s*(?:NO|NUMARASI)?)[^\d]{0,12}(\d{4})'),
-      RegExp(r'(?:\*{4,}|X{4,})\s*(\d{4})'),
+      RegExp(r'(?:\*{1,}|X{1,})\s*(\d{4})'),
       RegExp(r'\b\d{4}\s*(?:\*{4,}|X{4,})\s*(\d{4})\b'),
     ];
     for (final pattern in patterns) {
@@ -136,6 +149,18 @@ final class ParseReceiptTextUseCase {
   }
 
   static String? _extractMerchant(String text) {
+    final lines = text
+        .split(RegExp(r'[\r\n]+'))
+        .map((line) => line.trim())
+        .where((line) => line.length >= 3 && line.length <= 80)
+        .toList();
+    final businessName = RegExp(
+      r'\b(MARKET|MAĞAZA|MAGAZA|RESTORAN|CAFE|KAFE|PETROL|TİCARET|TICARET)\b',
+      caseSensitive: false,
+    );
+    final namedMerchant = lines.where(businessName.hasMatch).firstOrNull;
+    if (namedMerchant != null) return namedMerchant;
+
     final excluded = RegExp(
       r'(TARIH|DATE|SAAT|FIS|FİS|FATURA|VERGI|VERGİ|TOPLAM|TOTAL|TUTAR|'
       r'TERMINAL|TERMİNAL|POS|KDV|MALIYE|MALİYE|TESEKKUR|TEŞEKKÜR)',
