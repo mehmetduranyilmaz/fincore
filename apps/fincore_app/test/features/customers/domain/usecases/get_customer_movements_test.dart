@@ -30,16 +30,16 @@ void main() {
     final result = await useCase.execute('customer-1');
 
     expect(result.map((item) => item.transaction.id), [
-      'payment',
-      'collection',
       'training-expense',
+      'collection',
+      'payment',
     ]);
-    expect(result.first.balanceAfterMovement, -30);
-    expect(result.first.balanceSide, CustomerBalanceSide.creditor);
+    expect(result.first.balanceAfterMovement, 50);
+    expect(result.first.balanceSide, CustomerBalanceSide.debtor);
     expect(result[1].balanceAfterMovement, -100);
-    expect(result.last.balanceAfterMovement, 50);
-    expect(result.last.balanceSide, CustomerBalanceSide.debtor);
-    expect(result.last.transaction.isCustomerCreditExpense, isTrue);
+    expect(result.last.balanceAfterMovement, -30);
+    expect(result.last.balanceSide, CustomerBalanceSide.creditor);
+    expect(result.first.transaction.isCustomerCreditExpense, isTrue);
   });
 
   test('does not include deleted open-account expenses', () async {

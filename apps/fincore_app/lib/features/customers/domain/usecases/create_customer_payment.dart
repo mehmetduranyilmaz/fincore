@@ -10,6 +10,7 @@ import 'package:fincore_app/features/transactions/domain/entities/transaction.da
 import 'package:fincore_app/features/transactions/domain/entities/transaction_source.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
+import 'package:fincore_app/features/transactions/domain/usecases/installment_calculator.dart';
 
 final class CreateCustomerPaymentUseCase {
   CreateCustomerPaymentUseCase(
@@ -48,30 +49,64 @@ final class CreateCustomerPaymentUseCase {
     final description = input.description.trim().isEmpty
         ? '${isCollection ? 'Tahsilat' : 'Ödeme'} - ${customer.name}'
         : input.description.trim();
-    final transaction = Transaction(
-      id: _idGenerator(0),
-      accountId: input.accountId,
-      creditCardId: input.creditCardId,
-      amount: input.creditCardId != null
-          ? input.amount
-          : isCollection
-          ? input.amount
-          : -input.amount,
-      transactionType: input.creditCardId != null
-          ? TransactionType.expense
-          : TransactionType.transfer,
-      categoryId: null,
-      merchant: description,
-      note: null,
-      transactionDate: input.paymentDate,
-      source: TransactionSource.manual,
-      isDeleted: false,
-      paymentGroupId: _groupIdGenerator(),
-      customerId: customer.id,
-      customerBalanceDelta: isCollection ? -input.amount : input.amount,
-    );
-    await _transactionRepository.create(transaction);
-    return transaction;
+    final installmentAmounts = input.installmentAmounts.length > 1
+        ? input.installmentAmounts
+        : [input.amount];
+    if (installmentAmounts.length > 1) {
+      if (input.creditCardId == null) {
+        throw ArgumentError('Installments require a credit card.');
+      }
+      InstallmentCalculator.validateCustomAmounts(
+        input.amount,
+        installmentAmounts,
+      );
+    }
+    final groupId = _groupIdGenerator();
+    final planId = installmentAmounts.length > 1
+        ? '$groupId-installments'
+        : null;
+    final originalDate = _formatDate(input.paymentDate);
+    final transactions = [
+      for (final (index, amount) in installmentAmounts.indexed)
+        Transaction(
+          id: _idGenerator(index),
+          accountId: input.accountId,
+          creditCardId: input.creditCardId,
+          amount: input.creditCardId != null
+              ? amount
+              : isCollection
+              ? amount
+              : -amount,
+          transactionType: input.creditCardId != null
+              ? TransactionType.expense
+              : TransactionType.transfer,
+          categoryId: null,
+          merchant: installmentAmounts.length > 1
+              ? '$description ${index + 1}/${installmentAmounts.length} '
+                    '$originalDate'
+              : description,
+          note: null,
+          transactionDate: InstallmentCalculator.installmentDate(
+            input.paymentDate,
+            index,
+          ),
+          source: TransactionSource.manual,
+          isDeleted: false,
+          installmentPlanId: planId,
+          installmentNumber: planId == null ? null : index + 1,
+          installmentCount: planId == null ? null : installmentAmounts.length,
+          installmentTotalAmount: planId == null ? null : input.amount,
+          paymentGroupId: groupId,
+          customerId: customer.id,
+          customerBalanceDelta: isCollection ? -amount : amount,
+        ),
+    ];
+    if (transactions.length == 1) {
+      await _transactionRepository.create(transactions.single);
+    } else {
+      await _transactionRepository.createMany(transactions);
+    }
+    return transactions.first;
   }
 
   void _validateShape(CustomerPaymentInput input) {
@@ -136,4 +171,9 @@ final class CreateCustomerPaymentUseCase {
       'customer-payment-${DateTime.now().microsecondsSinceEpoch}-$index';
   static String _generateGroupId() =>
       'customer-payment-group-${DateTime.now().microsecondsSinceEpoch}';
+
+  static String _formatDate(DateTime value) =>
+      '${value.day.toString().padLeft(2, '0')}.'
+      '${value.month.toString().padLeft(2, '0')}.'
+      '${(value.year % 100).toString().padLeft(2, '0')}';
 }

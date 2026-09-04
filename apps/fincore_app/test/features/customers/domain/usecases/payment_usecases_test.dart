@@ -372,6 +372,59 @@ void main() {
       expect((await cardBalance.execute(_card.id)).currentDebt, 600);
     },
   );
+
+  test(
+    'customer card installments create one dated customer row per due date',
+    () async {
+      const customer = Customer(
+        id: 'customer-installment',
+        name: 'Cuma Burak Yılmaz',
+        openingBalance: -3000,
+        currencyCode: 'TRY',
+        isArchived: false,
+      );
+      final useCase = CreateCustomerPaymentUseCase(
+        transactions,
+        const _CustomerRepository(customer),
+        const _AccountRepository(),
+        const _CreditCardRepository(),
+        accountBalance,
+        cardBalance,
+        clock: () => DateTime(2026, 9, 3),
+        idGenerator: (index) => 'customer-installment-$index',
+        groupIdGenerator: () => 'customer-installment-group',
+      );
+
+      await useCase.execute(
+        CustomerPaymentInput(
+          customerId: customer.id,
+          direction: CustomerPaymentDirection.pay,
+          accountId: null,
+          creditCardId: _card.id,
+          amount: 3000,
+          description: 'FLO',
+          paymentDate: DateTime(2026, 9, 3),
+          installmentAmounts: const [1000, 1000, 1000],
+        ),
+      );
+
+      final rows = transactions.items
+          .where((item) => item.installmentPlanId != null)
+          .toList();
+      expect(rows.map((item) => item.transactionDate), [
+        DateTime(2026, 9, 3),
+        DateTime(2026, 10, 3),
+        DateTime(2026, 11, 3),
+      ]);
+      expect(rows.map((item) => item.amount), [1000, 1000, 1000]);
+      expect(rows.map((item) => item.merchant), [
+        'FLO 1/3 03.09.26',
+        'FLO 2/3 03.09.26',
+        'FLO 3/3 03.09.26',
+      ]);
+      expect(rows.map((item) => item.customerBalanceDelta), [1000, 1000, 1000]);
+    },
+  );
 }
 
 const _account = Account(

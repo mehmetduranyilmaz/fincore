@@ -33,7 +33,8 @@ final class GetCreditCardFutureInstallmentsUseCase {
     final result = transactions.where((transaction) {
       return transaction.creditCardId == creditCard.id &&
           !transaction.isDeleted &&
-          transaction.paymentGroupId == null &&
+          (transaction.paymentGroupId == null ||
+              transaction.customerId != null) &&
           transaction.transactionType == TransactionType.expense &&
           transaction.isInstallment &&
           transaction.transactionDate.isAfter(now) &&

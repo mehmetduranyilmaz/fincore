@@ -62,7 +62,8 @@ final class GetCreditCardActivitySummaryUseCase {
         currentPeriodAmount += signedAmount;
       }
       if (transaction.isInstallment &&
-          transaction.paymentGroupId == null &&
+          (transaction.paymentGroupId == null ||
+              transaction.customerId != null) &&
           transaction.transactionType == TransactionType.expense &&
           transaction.transactionDate.isAfter(now) &&
           !assignedIds.contains(transaction.id)) {

@@ -15,6 +15,7 @@ import 'package:fincore_app/features/customers/presentation/controllers/customer
 import 'package:fincore_app/features/customers/presentation/providers/customer_balance_provider.dart';
 import 'package:fincore_app/features/transactions/presentation/widgets/expense_date_field.dart';
 import 'package:fincore_app/features/transactions/presentation/widgets/expense_source_selector.dart';
+import 'package:fincore_app/features/transactions/presentation/widgets/installment_plan_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -41,6 +42,7 @@ final class _CustomerPaymentPageState
   final _descriptionController = TextEditingController();
   late DateTime _paymentDate;
   ExpenseSourceSelection? _source;
+  List<double> _installmentAmounts = const [];
 
   @override
   void initState() {
@@ -110,6 +112,7 @@ final class _CustomerPaymentPageState
                           inputFormatters: const [
                             TurkishDecimalInputFormatter(),
                           ],
+                          onChanged: (_) => setState(() {}),
                           validator: (text) {
                             final amount = AppFormatters.tryParseDecimal(
                               text ?? '',
@@ -144,9 +147,23 @@ final class _CustomerPaymentPageState
                               ? CustomerStrings.receivingAccount
                               : CustomerStrings.paymentSource,
                           hint: CustomerStrings.selectPaymentSource,
-                          onChanged: (selection) =>
-                              setState(() => _source = selection),
+                          onChanged: (selection) => setState(() {
+                            _source = selection;
+                            _installmentAmounts = const [];
+                          }),
                         ),
+                        if (_source?.creditCardId != null) ...[
+                          const SizedBox(height: AppSpacing.md),
+                          InstallmentPlanEditor(
+                            key: ValueKey(
+                              'customer_card_${_source!.creditCardId}',
+                            ),
+                            totalAmount: _totalAmount,
+                            initialCount: 1,
+                            onChanged: (amounts) =>
+                                _installmentAmounts = amounts,
+                          ),
+                        ],
                         const SizedBox(height: AppSpacing.md),
                         AppTextField(
                           controller: _descriptionController,
@@ -209,8 +226,12 @@ final class _CustomerPaymentPageState
             amount: AppFormatters.tryParseDecimal(_amountController.text)!,
             description: _descriptionController.text,
             paymentDate: _paymentDate,
+            installmentAmounts: _installmentAmounts,
           ),
         );
     if (success && mounted) context.pop();
   }
+
+  double get _totalAmount =>
+      AppFormatters.tryParseDecimal(_amountController.text) ?? 0;
 }

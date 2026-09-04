@@ -44,11 +44,20 @@ final class GetCustomerMovementsUseCase {
         ),
       );
     }
-    return List.unmodifiable(movements.reversed);
+    return List.unmodifiable(movements);
   }
 
   static int _compareChronologically(Transaction left, Transaction right) {
     final byDate = left.transactionDate.compareTo(right.transactionDate);
-    return byDate != 0 ? byDate : left.id.compareTo(right.id);
+    if (byDate != 0) return byDate;
+    final byCreation = _createdOrder(
+      left.id,
+    ).compareTo(_createdOrder(right.id));
+    return byCreation != 0 ? byCreation : left.id.compareTo(right.id);
+  }
+
+  static int _createdOrder(String id) {
+    final match = RegExp(r'\d{13,}').firstMatch(id);
+    return int.tryParse(match?.group(0) ?? '') ?? 0;
   }
 }

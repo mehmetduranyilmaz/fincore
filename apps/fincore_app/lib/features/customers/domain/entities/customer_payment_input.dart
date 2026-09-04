@@ -9,6 +9,7 @@ final class CustomerPaymentInput {
     required this.amount,
     required this.description,
     required this.paymentDate,
+    this.installmentAmounts = const [],
   });
 
   final String customerId;
@@ -18,4 +19,5 @@ final class CustomerPaymentInput {
   final double amount;
   final String description;
   final DateTime paymentDate;
+  final List<double> installmentAmounts;
 }
