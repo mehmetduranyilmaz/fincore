@@ -101,10 +101,13 @@ final class CalculateCreditCardBalanceUseCase {
       }
     }
 
+    // The limit is consumed by exactly what is owed. Summing raw transactions
+    // instead drifts from the debt when a statement line's transaction is
+    // later edited or deleted, since the cut statement still bills it.
     return CreditCardBalance(
       creditLimit: creditCard.creditLimit,
       currentDebt: currentDebt,
-      availableLimitUsed: availableLimitUsed,
+      availableLimitUsed: currentDebt,
       totalSpent: totalSpent,
       totalPayments: totalPayments,
     );

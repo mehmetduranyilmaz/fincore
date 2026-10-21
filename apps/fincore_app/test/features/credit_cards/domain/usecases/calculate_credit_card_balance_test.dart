@@ -126,6 +126,61 @@ void main() {
       expect(result.availableLimit, 7500);
     },
   );
+
+  test(
+    'available limit follows current debt when a billed line is deleted',
+    () async {
+      final kept = _transaction(
+        id: 'kept',
+        amount: 1000,
+        type: TransactionType.expense,
+      );
+      final payment = _transaction(
+        id: 'payment',
+        amount: 1042.25,
+        type: TransactionType.income,
+        paymentGroupId: 'payment-group',
+        statementId: 'statement-1',
+      );
+      final open = _transaction(
+        id: 'open',
+        amount: 300,
+        type: TransactionType.expense,
+        date: DateTime(2026, 9, 5),
+      );
+      final result = await CalculateCreditCardBalanceUseCase(
+        const _CreditCardRepository([_creditCard]),
+        // The statement's 42,25 tram line was deleted after it was billed.
+        _TransactionRepository([kept, payment, open]),
+        statementRepository: _StatementRepository([
+          CreditCardStatement(
+            id: 'statement-1',
+            creditCardId: _creditCard.id,
+            statementDate: DateTime(2026, 8, 31),
+            dueDate: DateTime(2026, 9, 10),
+            createdAt: DateTime(2026, 8, 31),
+            lines: [
+              CreditCardStatementLine(
+                transactionId: kept.id,
+                description: kept.merchant,
+                transactionDate: kept.transactionDate,
+                amount: 1000,
+              ),
+              CreditCardStatementLine(
+                transactionId: 'deleted-tram',
+                description: 'TRAMVAY',
+                transactionDate: DateTime(2026, 8, 8),
+                amount: 42.25,
+              ),
+            ],
+          ),
+        ]),
+      ).execute(_creditCard.id);
+
+      expect(result.currentDebt, 300);
+      expect(result.availableLimit, _creditCard.creditLimit - 300);
+    },
+  );
 }
 
 const CreditCard _creditCard = CreditCard(
