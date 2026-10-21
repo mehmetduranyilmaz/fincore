@@ -34,6 +34,17 @@ final class CreditCardPaymentDetail {
   bool get isPaid => totalsByCurrency.entries.every(
     (entry) => (paidByCurrency[entry.key] ?? 0) >= entry.value,
   );
+
+  bool get isPartiallyPaid =>
+      !isPaid && paidByCurrency.values.any((value) => value > 0);
+
+  Map<String, double> get remainingByCurrency => {
+    for (final entry in totalsByCurrency.entries)
+      entry.key: (entry.value - (paidByCurrency[entry.key] ?? 0)).clamp(
+        0,
+        double.infinity,
+      ),
+  };
 }
 
 final class CreditCardPaymentMonth {

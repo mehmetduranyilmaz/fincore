@@ -37,6 +37,18 @@ final class TransactionDetailsPage extends ConsumerWidget {
               icon: const Icon(Icons.calendar_month_outlined),
             ),
           if (details.value case final Transaction transaction
+              when transaction.isInstallment && !transaction.isDeleted)
+            IconButton(
+              key: const Key('reschedule_installments_action'),
+              tooltip: TransactionStrings.rescheduleInstallments,
+              onPressed: () => context.push(
+                AppRoutes.rescheduleTransactionInstallmentsLocation(
+                  transactionId,
+                ),
+              ),
+              icon: const Icon(Icons.edit_calendar_outlined),
+            ),
+          if (details.value case final Transaction transaction
               when transaction.isEditable || transaction.isCustomerPayment)
             IconButton(
               tooltip: TransactionStrings.edit,

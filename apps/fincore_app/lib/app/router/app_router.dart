@@ -29,6 +29,7 @@ import 'package:fincore_app/features/transactions/presentation/pages/create_manu
 import 'package:fincore_app/features/transactions/presentation/pages/create_receipt_expense_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/create_transfer_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/convert_installments_page.dart';
+import 'package:fincore_app/features/transactions/presentation/pages/reschedule_installments_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/edit_transaction_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/edit_recurring_expense_plan_page.dart';
 import 'package:fincore_app/features/transactions/presentation/pages/recurring_expense_plans_page.dart';
@@ -112,6 +113,12 @@ abstract final class AppRouter {
         GoRoute(
           path: AppRoutes.convertTransactionInstallments,
           builder: (context, state) => ConvertInstallmentsPage(
+            transactionId: state.pathParameters['transactionId']!,
+          ),
+        ),
+        GoRoute(
+          path: AppRoutes.rescheduleTransactionInstallments,
+          builder: (context, state) => RescheduleInstallmentsPage(
             transactionId: state.pathParameters['transactionId']!,
           ),
         ),

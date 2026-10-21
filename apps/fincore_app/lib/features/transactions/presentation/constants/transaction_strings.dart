@@ -58,6 +58,16 @@ abstract final class TransactionStrings {
   static const String convertToInstallments = 'Taksitlendir';
   static const String convertToInstallmentsTitle = 'İşlemi Taksitlendir';
   static const String installmentNumber = 'Taksit';
+  static const String rescheduleInstallments = 'Taksit Tarihlerini Değiştir';
+  static const String rescheduleInstallmentsHint =
+      'Henüz ekstresi kesilmemiş gelecek taksitlerin tarihlerini değiştirebilirsiniz. Tarih, taksitin hangi döneme yansıyacağını belirler.';
+  static const String installmentLocked = 'Değiştirilemez';
+  static const String installmentDatesOrder =
+      'Taksit tarihleri sıralı olmalı; her taksit bir öncekinden sonra gelmelidir.';
+  static const String noReschedulableInstallments =
+      'Bu işlemde tarihi değiştirilebilecek gelecek taksit bulunmuyor.';
+  static const String installmentDatesUpdated = 'Taksit tarihleri güncellendi.';
+  static const String save = 'Kaydet';
   static const String originalAmount = 'Toplam Harcama';
   static const String cancel = 'Vazgeç';
   static const String amount = 'Tutar';

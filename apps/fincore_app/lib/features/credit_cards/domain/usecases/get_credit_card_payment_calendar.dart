@@ -99,7 +99,6 @@ final class GetCreditCardPaymentCalendarUseCase {
         detailKey: (CreditCardPaymentDetailKind.creditCard, card.id),
         detailLabel: _cardLabel(card),
         planned: false,
-        paid: false,
       );
     }
 
@@ -124,8 +123,8 @@ final class GetCreditCardPaymentCalendarUseCase {
 
     final recurringPlans =
         await _recurringExpensePlanRepository?.getPlans() ?? const [];
-    final paidRecurringOccurrenceIds =
-        _paidRecurringOccurrenceIds(recurringPlans, transactions, {
+    final paidRecurringOccurrenceCents =
+        _paidRecurringOccurrenceCents(recurringPlans, transactions, {
           for (final customer in customers)
             customer.id: InstallmentCalculator.toCents(
               customer.openingBalance < 0 ? -customer.openingBalance : 0,
@@ -159,12 +158,12 @@ final class GetCreditCardPaymentCalendarUseCase {
           // Posting the due occurrence is not proof of payment. Historical
           // customer payments are allocated FIFO to the customer's realized
           // recurring obligations, independently of the payment month.
-          paid: paidRecurringOccurrenceIds.contains(
-            RecurringExpenseOccurrence.transactionId(
-              planId: plan.id,
-              dueDate: dueDate,
-            ),
-          ),
+          paidCents:
+              paidRecurringOccurrenceCents[RecurringExpenseOccurrence.transactionId(
+                planId: plan.id,
+                dueDate: dueDate,
+              )] ??
+              0,
         );
       }
     }
@@ -232,7 +231,9 @@ final class GetCreditCardPaymentCalendarUseCase {
     ]);
   }
 
-  static Set<String> _paidRecurringOccurrenceIds(
+  /// Paid cents per realized customer recurring occurrence id. The last
+  /// occurrence reached by the available payments may be partially paid.
+  static Map<String, int> _paidRecurringOccurrenceCents(
     List<RecurringExpensePlan> plans,
     List<Transaction> transactions,
     Map<String, int> openingPayableCentsByCustomer,
@@ -259,7 +260,7 @@ final class GetCreditCardPaymentCalendarUseCase {
       }
     }
 
-    final result = <String>{};
+    final result = <String, int>{};
     for (final entry in obligationsByCustomer.entries) {
       final obligations = entry.value
         ..sort((left, right) => left.dueDate.compareTo(right.dueDate));
@@ -289,9 +290,12 @@ final class GetCreditCardPaymentCalendarUseCase {
           ? availablePaymentCents - openingPayableCents
           : 0;
       for (final obligation in obligations) {
-        if (availablePaymentCents < obligation.cents) break;
-        availablePaymentCents -= obligation.cents;
-        result.add(obligation.id);
+        if (availablePaymentCents <= 0) break;
+        final paidCents = availablePaymentCents < obligation.cents
+            ? availablePaymentCents
+            : obligation.cents;
+        availablePaymentCents -= paidCents;
+        result[obligation.id] = paidCents;
       }
     }
     return result;
@@ -351,9 +355,10 @@ final class _MonthBucket {
     required (CreditCardPaymentDetailKind, String) detailKey,
     required String detailLabel,
     required bool planned,
-    required bool paid,
+    int paidCents = 0,
   }) {
     final cents = InstallmentCalculator.toCents(amount.abs());
+    final paid = paidCents.clamp(0, cents);
     transactionCount++;
     if (planned) plannedExpenseCount++;
     centsByCurrency.update(
@@ -367,13 +372,13 @@ final class _MonthBucket {
           currencyCode: currencyCode,
           cents: cents,
           planned: planned,
-          paid: paid,
+          paidCents: paid,
         );
-    if (paid) {
+    if (paid > 0) {
       paidCentsByCurrency.update(
         currencyCode,
-        (value) => value + cents,
-        ifAbsent: () => cents,
+        (value) => value + paid,
+        ifAbsent: () => paid,
       );
     }
   }
@@ -407,7 +412,7 @@ final class _DetailBucket {
     required String currencyCode,
     required int cents,
     required bool planned,
-    required bool paid,
+    required int paidCents,
   }) {
     transactionCount++;
     if (planned) plannedExpenseCount++;
@@ -416,11 +421,11 @@ final class _DetailBucket {
       (value) => value + cents,
       ifAbsent: () => cents,
     );
-    if (paid) {
+    if (paidCents > 0) {
       paidCentsByCurrency.update(
         currencyCode,
-        (value) => value + cents,
-        ifAbsent: () => cents,
+        (value) => value + paidCents,
+        ifAbsent: () => paidCents,
       );
     }
   }

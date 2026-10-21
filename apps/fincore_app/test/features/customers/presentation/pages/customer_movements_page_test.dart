@@ -40,6 +40,62 @@ void main() {
     );
     expect(find.text('Bakiye: 50,00 ₺ A'), findsOneWidget);
   });
+
+  testWidgets('filters by date range and keeps the current balance note', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(800, 1400);
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          customerProvider.overrideWith((ref, id) async => _customer),
+          customerMovementsProvider.overrideWith(
+            (ref, id) async => [
+              CustomerMovement(
+                transaction: _transaction(
+                  'july',
+                  70,
+                  date: DateTime(2026, 7, 10),
+                ),
+                balanceAfterMovement: 170,
+              ),
+              ..._movements,
+            ],
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: const CustomerMovementsPage(customerId: 'customer-1'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('july'), findsOneWidget);
+    expect(find.text('Güncel Bakiye'), findsOneWidget);
+    expect(find.text('Tüm tarihler'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('customer_movements_date_range')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.edit_outlined));
+    await tester.pumpAndSettle();
+    final fields = find.byType(TextField);
+    await tester.enterText(fields.at(0), '08/01/2026');
+    await tester.enterText(fields.at(1), '08/31/2026');
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('july'), findsNothing);
+    expect(find.text('payment'), findsOneWidget);
+    expect(find.text('Devir Bakiyesi'), findsOneWidget);
+    expect(find.text('170,00 ₺ B'), findsOneWidget);
+    expect(find.text('Güncel Bakiye'), findsOneWidget);
+    expect(find.text('50,00 ₺ A'), findsOneWidget);
+    expect(find.textContaining('tarih filtresinden bağımsız'), findsOneWidget);
+  });
 }
 
 const _customer = Customer(
@@ -61,7 +117,7 @@ final _movements = [
   ),
 ];
 
-Transaction _transaction(String id, double delta) {
+Transaction _transaction(String id, double delta, {DateTime? date}) {
   return Transaction(
     id: id,
     accountId: 'account-1',
@@ -71,7 +127,7 @@ Transaction _transaction(String id, double delta) {
     categoryId: null,
     merchant: id,
     note: null,
-    transactionDate: DateTime(2026, 8, 1),
+    transactionDate: date ?? DateTime(2026, 8, 1),
     source: TransactionSource.manual,
     isDeleted: false,
     paymentGroupId: 'group-$id',

@@ -39,6 +39,13 @@ abstract final class CustomerStrings {
   static const collection = 'Tahsilat';
   static const payment = 'Ödeme';
   static const balance = 'Bakiye';
+  static const currentBalance = 'Güncel Bakiye';
+  static const carriedBalance = 'Devir Bakiyesi';
+  static const allDates = 'Tüm tarihler';
+  static const clearDateRange = 'Tarih filtresini temizle';
+  static const noMovementsInRange = 'Seçilen tarih aralığında hareket yok.';
+  static const currentBalanceNote =
+      'Not: Güncel bakiye, tarih filtresinden bağımsız olarak tüm hareketler dikkate alınarak hesaplanır.';
   static const debtorCode = 'B';
   static const creditorCode = 'A';
   static const settledCode = '-';

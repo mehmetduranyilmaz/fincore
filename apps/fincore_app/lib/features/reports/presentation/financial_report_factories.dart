@@ -188,10 +188,18 @@ abstract final class FinancialReportFactories {
   static FinancialPdfReport customerMovements({
     required Customer customer,
     required List<CustomerMovement> movements,
+    double? currentBalance,
+    DateTime? startDate,
+    DateTime? endDate,
   }) {
-    final balance = movements.isEmpty
-        ? customer.openingBalance
-        : movements.first.balanceAfterMovement;
+    final balance =
+        currentBalance ??
+        (movements.isEmpty
+            ? customer.openingBalance
+            : movements.last.balanceAfterMovement);
+    final currentBalanceLabel =
+        '${AppFormatters.currency(balance.abs(), currencyCode: customer.currencyCode)} ${_balanceCode(balance)}';
+    final hasDateRange = startDate != null || endDate != null;
     var debit = 0.0;
     var credit = 0.0;
     for (final item in movements) {
@@ -204,12 +212,15 @@ abstract final class FinancialReportFactories {
     }
     return FinancialPdfReport(
       title: '${customer.name} - Müşteri Hareketleri',
-      subtitle: 'Cari hesap hareketleri ve hareket sonrası bakiye dökümü',
+      subtitle: hasDateRange
+          ? 'Cari hesap hareketleri • '
+                '${startDate == null ? 'Başlangıç' : AppFormatters.date(startDate)} - '
+                '${endDate == null ? 'Bugün' : AppFormatters.date(endDate)}'
+          : 'Cari hesap hareketleri ve hareket sonrası bakiye dökümü',
       metrics: [
         FinancialReportMetric(
           label: 'Güncel bakiye',
-          value:
-              '${AppFormatters.currency(balance.abs(), currencyCode: customer.currencyCode)} ${_balanceCode(balance)}',
+          value: currentBalanceLabel,
         ),
         FinancialReportMetric(
           label: 'Borçlandıran hareketler',
@@ -261,6 +272,7 @@ abstract final class FinancialReportFactories {
           ],
       ],
       note:
+          '${hasDateRange ? 'Seçilen tarih aralığından bağımsız güncel bakiye: $currentBalanceLabel. ' : ''}'
           'B: müşteri size borçlu, A: siz müşteriye borçlusunuz, -: hesap kapalıdır.',
     );
   }
@@ -286,7 +298,10 @@ abstract final class FinancialReportFactories {
             '  ${detail.label}',
             detail.confirmedTransactionCount.toString(),
             detail.plannedExpenseCount.toString(),
-            _currencyTotals(detail.totalsByCurrency),
+            detail.isPartiallyPaid
+                ? '${_currencyTotals(detail.totalsByCurrency)} '
+                      '(Kalan: ${_currencyTotals(detail.remainingByCurrency)})'
+                : _currencyTotals(detail.totalsByCurrency),
           ]);
         }
       }

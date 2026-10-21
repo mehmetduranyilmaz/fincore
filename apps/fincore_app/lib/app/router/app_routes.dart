@@ -16,6 +16,8 @@ abstract final class AppRoutes {
   static const String editTransaction = '/transactions/:transactionId/edit';
   static const String convertTransactionInstallments =
       '/transactions/:transactionId/installments';
+  static const String rescheduleTransactionInstallments =
+      '/transactions/:transactionId/installment-dates';
   static const String createCategory = '/categories/create';
   static const String editCategory = '/categories/:categoryId/edit';
   static const String createBudget = '/budgets/create';
@@ -57,6 +59,12 @@ abstract final class AppRoutes {
 
   static String convertTransactionInstallmentsLocation(String transactionId) {
     return '${transactionDetailsLocation(transactionId)}/installments';
+  }
+
+  static String rescheduleTransactionInstallmentsLocation(
+    String transactionId,
+  ) {
+    return '${transactionDetailsLocation(transactionId)}/installment-dates';
   }
 
   static String editCategoryLocation(String categoryId) {

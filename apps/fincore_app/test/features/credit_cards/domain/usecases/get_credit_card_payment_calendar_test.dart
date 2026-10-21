@@ -232,6 +232,58 @@ void main() {
     expect(september.isPaid, isFalse);
     expect(september.details.single.isPaid, isFalse);
   });
+
+  test('shows a partial customer payment as remaining on the item', () async {
+    final plan = RecurringExpensePlan(
+      id: 'customer-plan',
+      accountId: null,
+      creditCardId: null,
+      customerId: 'customer-1',
+      amount: 500,
+      description: 'Eğitim gideri',
+      categoryId: 'education',
+      currencyCode: 'TRY',
+      firstDueDate: DateTime(2026, 8, 1),
+      occurrenceCount: 2,
+    );
+    final useCase = GetCreditCardPaymentCalendarUseCase(
+      const _CreditCardRepository(),
+      _TransactionRepository([
+        Transaction(
+          id: 'customer-plan-payment',
+          accountId: 'account-1',
+          creditCardId: null,
+          amount: -3800,
+          transactionType: TransactionType.transfer,
+          categoryId: null,
+          merchant: 'Plan payment',
+          note: null,
+          transactionDate: DateTime(2026, 8, 31),
+          source: TransactionSource.manual,
+          isDeleted: false,
+          paymentGroupId: 'customer-plan-payment-group',
+          customerId: 'customer-1',
+          customerBalanceDelta: 3800,
+        ),
+      ]),
+      recurringExpensePlanRepository: _RecurringExpensePlanRepository([plan]),
+      customerRepository: const _CustomerRepository(),
+      clock: () => DateTime(2026, 9, 2),
+    );
+
+    final calendar = await useCase.execute();
+    final august = calendar.years.single.months.first;
+    final september = calendar.years.single.months.last;
+
+    expect(august.details.single.isPaid, isTrue);
+    expect(august.details.single.isPartiallyPaid, isFalse);
+    final detail = september.details.single;
+    expect(detail.isPaid, isFalse);
+    expect(detail.isPartiallyPaid, isTrue);
+    expect(detail.paidByCurrency, {'TRY': 300});
+    expect(detail.remainingByCurrency, {'TRY': 200});
+    expect(september.remainingByCurrency, {'TRY': 200});
+  });
 }
 
 final class _AccountRepository implements AccountRepository {

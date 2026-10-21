@@ -54,6 +54,7 @@ import 'package:fincore_app/features/transactions/domain/usecases/realize_due_re
 import 'package:fincore_app/features/transactions/domain/usecases/delete_recurring_expense_plan.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_receipt_expense.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/convert_expense_to_installments.dart';
+import 'package:fincore_app/features/transactions/domain/usecases/reschedule_installments.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_manual_income.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/create_transfer.dart';
 import 'package:fincore_app/features/transactions/domain/usecases/delete_transaction.dart';
@@ -467,6 +468,13 @@ convertExpenseToInstallmentsProvider =
         ref.watch(installmentTransactionRepositoryProvider),
       ),
     );
+
+final rescheduleInstallmentsProvider = Provider<RescheduleInstallmentsUseCase>(
+  (ref) => RescheduleInstallmentsUseCase(
+    ref.watch(transactionRepositoryProvider),
+    statementRepository: ref.watch(creditCardStatementRepositoryProvider),
+  ),
+);
 
 final parseReceiptTextProvider = Provider<ParseReceiptTextUseCase>(
   (ref) => ParseReceiptTextUseCase(ref.watch(categoryRepositoryProvider)),

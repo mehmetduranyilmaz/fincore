@@ -433,7 +433,34 @@ final class _PaymentDetailRow extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppSpacing.sm),
-            _CurrencyTotals(totals: detail.totalsByCurrency),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _CurrencyTotals(totals: detail.totalsByCurrency),
+                if (detail.isPartiallyPaid) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  _CurrencyTotals(
+                    key: Key(
+                      'payment_detail_paid_${detail.kind.name}_${detail.sourceId}',
+                    ),
+                    totals: detail.paidByCurrency,
+                    prefix: 'Ödenen: ',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  _CurrencyTotals(
+                    key: Key(
+                      'payment_detail_remaining_${detail.kind.name}_${detail.sourceId}',
+                    ),
+                    totals: detail.remainingByCurrency,
+                    prefix: 'Kalan: ',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: colors.error,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ],
         ),
       ),
@@ -451,7 +478,12 @@ final class _PaymentDetailRow extends StatelessWidget {
 }
 
 final class _CurrencyTotals extends StatelessWidget {
-  const _CurrencyTotals({required this.totals, this.style, this.prefix = ''});
+  const _CurrencyTotals({
+    required this.totals,
+    this.style,
+    this.prefix = '',
+    super.key,
+  });
 
   final Map<String, double> totals;
   final TextStyle? style;
