@@ -96,7 +96,12 @@ final class TransactionDetailsPage extends ConsumerWidget {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 720),
-                child: TransactionDetailsView(transaction: transaction),
+                child: TransactionDetailsView(
+                  transaction: transaction,
+                  sourceName: ref
+                      .watch(transactionSourceNameProvider(transactionId))
+                      .value,
+                ),
               ),
             ),
           );

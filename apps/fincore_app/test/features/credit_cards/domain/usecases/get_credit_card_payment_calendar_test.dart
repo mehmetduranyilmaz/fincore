@@ -142,6 +142,187 @@ void main() {
     expect(august.remainingByCurrency, {'TRY': 50});
   });
 
+  test('plans posted a month early show in their posting month', () async {
+    final plan = RecurringExpensePlan(
+      id: 'net-vip',
+      accountId: null,
+      creditCardId: null,
+      customerId: 'customer-1',
+      amount: 14000,
+      description: '14.000 × 10 TAKSİT',
+      categoryId: null,
+      currencyCode: 'TRY',
+      firstDueDate: DateTime(2026, 9, 3),
+      occurrenceCount: 10,
+      movementMonthsBeforeDue: 1,
+    );
+    Transaction occurrence(DateTime dueDate) => Transaction(
+      id: RecurringExpenseOccurrence.transactionId(
+        planId: plan.id,
+        dueDate: dueDate,
+      ),
+      accountId: null,
+      creditCardId: null,
+      amount: 14000,
+      transactionType: TransactionType.expense,
+      categoryId: null,
+      merchant: plan.description,
+      note: null,
+      transactionDate: plan.movementDate(dueDate),
+      source: TransactionSource.recurringPlan,
+      isDeleted: false,
+      customerId: 'customer-1',
+      customerBalanceDelta: -14000,
+    );
+    Transaction payment(String id, double amount, DateTime date) => Transaction(
+      id: id,
+      accountId: 'account-1',
+      creditCardId: null,
+      amount: -amount,
+      transactionType: TransactionType.transfer,
+      categoryId: null,
+      merchant: id,
+      note: null,
+      transactionDate: date,
+      source: TransactionSource.manual,
+      isDeleted: false,
+      paymentGroupId: '$id-group',
+      customerId: 'customer-1',
+      customerBalanceDelta: amount,
+    );
+    final calendar = await GetCreditCardPaymentCalendarUseCase(
+      const _CreditCardRepository(),
+      _TransactionRepository([
+        occurrence(DateTime(2026, 9, 3)),
+        occurrence(DateTime(2026, 10, 3)),
+        occurrence(DateTime(2026, 11, 3)),
+        // The test customer opens with 3.000 payable, settled first.
+        payment('elden-odenen', 17000, DateTime(2026, 9, 12)),
+        payment('fida', 14000, DateTime(2026, 10, 3)),
+      ]),
+      recurringExpensePlanRepository: _RecurringExpensePlanRepository([plan]),
+      customerRepository: const _CustomerRepository(),
+      clock: () => DateTime(2026, 10, 21),
+    ).execute();
+
+    final months = [for (final year in calendar.years) ...year.months];
+    final byLabel = {for (final month in months) month.periodLabel: month};
+    expect(months.first.periodLabel, '2026-08');
+    expect(months.last.periodLabel, '2027-05');
+    expect(byLabel.containsKey('2027-06'), isFalse);
+    expect(byLabel['2026-08']!.isPaid, isTrue);
+    expect(byLabel['2026-09']!.isPaid, isTrue);
+    expect(byLabel['2026-10']!.isPaid, isFalse);
+    expect(byLabel['2026-10']!.plannedExpenseCount, 0);
+    expect(byLabel['2026-11']!.plannedExpenseCount, 1);
+  });
+
+  test('a cut statement keeps its billed total in its own period', () async {
+    final statement = CreditCardStatement(
+      id: 'statement-september',
+      creditCardId: 'try-card',
+      statementDate: DateTime(2026, 9, 20),
+      dueDate: DateTime(2026, 9, 30),
+      createdAt: DateTime(2026, 9, 20, 18),
+      lines: [
+        CreditCardStatementLine(
+          transactionId: 'charge',
+          description: 'Alışveriş',
+          transactionDate: DateTime(2026, 9, 5),
+          amount: 100,
+        ),
+        CreditCardStatementLine(
+          transactionId: 'deleted-later',
+          description: 'Tramvay',
+          transactionDate: DateTime(2026, 9, 8),
+          amount: 42.25,
+        ),
+      ],
+    );
+    final calendar = await GetCreditCardPaymentCalendarUseCase(
+      const _CreditCardRepository(),
+      _TransactionRepository([
+        _expense('charge', 'try-card', 100, DateTime(2026, 9, 5)),
+        Transaction(
+          id: 'payment',
+          accountId: null,
+          creditCardId: 'try-card',
+          amount: 142.25,
+          transactionType: TransactionType.income,
+          categoryId: null,
+          merchant: 'Ekstre ödemesi',
+          note: null,
+          transactionDate: DateTime(2026, 9, 28),
+          source: TransactionSource.manual,
+          isDeleted: false,
+          paymentGroupId: 'payment-group',
+          creditCardStatementId: statement.id,
+        ),
+      ]),
+      statementRepository: _StatementRepository([statement]),
+      clock: () => DateTime(2026, 10, 21),
+    ).execute();
+
+    final september = calendar.years.single.months.single;
+    expect(september.periodLabel, '2026-09');
+    expect(september.totalsByCurrency, {'TRY': 142.25});
+    expect(september.transactionCount, 2);
+    expect(september.isPaid, isTrue);
+  });
+
+  test('a charge left off a cut statement moves to the open period', () async {
+    final statement = CreditCardStatement(
+      id: 'statement-october',
+      creditCardId: 'try-card',
+      statementDate: DateTime(2026, 10, 1),
+      dueDate: DateTime(2026, 10, 12),
+      createdAt: DateTime(2026, 10, 1, 18),
+      lines: [
+        CreditCardStatementLine(
+          transactionId: 'charge',
+          description: 'Alışveriş',
+          transactionDate: DateTime(2026, 9, 15),
+          amount: 100,
+        ),
+      ],
+    );
+    final payment = Transaction(
+      id: 'payment',
+      accountId: null,
+      creditCardId: 'try-card',
+      amount: 100,
+      transactionType: TransactionType.income,
+      categoryId: null,
+      merchant: 'Ekstre ödemesi',
+      note: null,
+      transactionDate: DateTime(2026, 10, 10),
+      source: TransactionSource.manual,
+      isDeleted: false,
+      paymentGroupId: 'payment-group',
+      creditCardStatementId: statement.id,
+    );
+    final calendar = await GetCreditCardPaymentCalendarUseCase(
+      const _CreditCardRepository(),
+      _TransactionRepository([
+        _expense('charge', 'try-card', 100, DateTime(2026, 9, 15)),
+        _expense('tram', 'try-card', 42.25, DateTime(2026, 9, 9)),
+        payment,
+      ]),
+      statementRepository: _StatementRepository([statement]),
+      clock: () => DateTime(2026, 10, 21),
+    ).execute();
+
+    final months = calendar.years.single.months;
+    // The 1 October statement closes September (nearest cut is 20 Sep) and is
+    // fully paid; the forgotten charge waits in the open period like current
+    // debt instead of leaving a remainder in the paid month.
+    expect(months.map((month) => month.periodLabel), ['2026-09', '2026-10']);
+    expect(months.first.isPaid, isTrue);
+    expect(months.first.totalsByCurrency, {'TRY': 100});
+    expect(months.last.totalsByCurrency, {'TRY': 42.25});
+    expect(months.last.isPaid, isFalse);
+  });
+
   test('keeps paid August checked and unpaid September unchecked', () async {
     final plan = RecurringExpensePlan(
       id: 'customer-plan',

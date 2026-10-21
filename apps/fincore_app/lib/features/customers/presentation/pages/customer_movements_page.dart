@@ -12,6 +12,7 @@ import 'package:fincore_app/features/customers/presentation/constants/customer_s
 import 'package:fincore_app/features/customers/domain/entities/customer_movement.dart';
 import 'package:fincore_app/features/customers/presentation/providers/customer_balance_provider.dart';
 import 'package:fincore_app/features/reports/presentation/financial_report_factories.dart';
+import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_occurrence.dart';
 import 'package:fincore_app/features/transactions/presentation/constants/transaction_strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -242,6 +243,12 @@ final class _MovementCard extends StatelessWidget {
         : movement.accountId != null
         ? 'Kasa/Banka'
         : 'Kredi Kartı';
+    final dueDate = RecurringExpenseOccurrence.dueDateOf(movement.id);
+    final dueLabel =
+        dueDate != null &&
+            !DateUtils.isSameDay(dueDate, movement.transactionDate)
+        ? ' • ${TransactionStrings.dueDate}: ${AppFormatters.date(dueDate)}'
+        : '';
     return AppCard(
       child: ListTile(
         contentPadding: EdgeInsets.zero,
@@ -257,7 +264,7 @@ final class _MovementCard extends StatelessWidget {
         title: Text(movement.merchant),
         subtitle: Text(
           '${AppFormatters.date(movement.transactionDate)} • '
-          '$movementLabel • $sourceLabel',
+          '$movementLabel • $sourceLabel$dueLabel',
         ),
         trailing: Column(
           mainAxisSize: MainAxisSize.min,

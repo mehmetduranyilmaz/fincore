@@ -1,3 +1,4 @@
+import 'package:fincore_app/app/state/app_controller.dart';
 import 'package:fincore_app/app/state/app_data_refresh_coordinator.dart';
 import 'package:fincore_app/core/di/providers.dart';
 import 'package:fincore_app/core/errors/error_mapper.dart';
@@ -50,6 +51,7 @@ final class _EditRecurringExpensePlanPageState
   ExpenseSourceSelection? _source;
   String? _categoryId;
   late DateTime _firstDueDate;
+  bool _movementOneMonthEarly = false;
   _RecurringPaymentStatus _paymentStatus = _RecurringPaymentStatus.cash;
 
   @override
@@ -125,6 +127,22 @@ final class _EditRecurringExpensePlanPageState
                             ExpenseDateField(
                               value: _firstDueDate,
                               onTap: _selectDate,
+                            ),
+                            SwitchListTile(
+                              key: const Key(
+                                'recurring_movement_one_month_early',
+                              ),
+                              contentPadding: EdgeInsets.zero,
+                              title: const Text(
+                                TransactionStrings.movementOneMonthEarly,
+                              ),
+                              subtitle: const Text(
+                                TransactionStrings.movementOneMonthEarlyHint,
+                              ),
+                              value: _movementOneMonthEarly,
+                              onChanged: (value) => setState(
+                                () => _movementOneMonthEarly = value,
+                              ),
                             ),
                             const SizedBox(height: AppSpacing.md),
                             AppTextField(
@@ -246,6 +264,7 @@ final class _EditRecurringExpensePlanPageState
       setState(() {
         _plan = plan;
         _firstDueDate = plan.firstDueDate;
+        _movementOneMonthEarly = plan.movementMonthsBeforeDue > 0;
         _categoryId = plan.categoryId;
         _loading = false;
       });
@@ -313,11 +332,16 @@ final class _EditRecurringExpensePlanPageState
               categoryId: _categoryId,
               firstDueDate: _firstDueDate,
               occurrenceCount: int.parse(_occurrenceCountController.text),
+              movementMonthsBeforeDue: _movementOneMonthEarly ? 1 : 0,
             ),
           );
       ref.invalidate(recurringExpensePlansProvider);
       ref.invalidate(recurringExpensePlanProvider(widget.planId));
       ref.read(appDataRefreshCoordinatorProvider).recurringExpensePlanChanged();
+      // Post or re-date occurrences for the new schedule right away.
+      await ref
+          .read(appControllerProvider.notifier)
+          .realizeDueRecurringExpenses();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

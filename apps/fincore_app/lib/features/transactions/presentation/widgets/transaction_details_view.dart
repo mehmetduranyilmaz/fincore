@@ -3,14 +3,22 @@ import 'package:fincore_app/core/theme/app_spacing.dart';
 import 'package:fincore_app/core/widgets/app_card.dart';
 import 'package:fincore_app/features/accounts/presentation/constants/account_strings.dart';
 import 'package:fincore_app/features/categories/presentation/constants/category_strings.dart';
+import 'package:fincore_app/features/transactions/domain/entities/recurring_expense_occurrence.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/presentation/constants/transaction_strings.dart';
 import 'package:flutter/material.dart';
 
 final class TransactionDetailsView extends StatelessWidget {
-  const TransactionDetailsView({required this.transaction, super.key});
+  const TransactionDetailsView({
+    required this.transaction,
+    this.sourceName,
+    super.key,
+  });
 
   final Transaction transaction;
+
+  /// Resolved account or card name; falls back to the id-based label.
+  final String? sourceName;
 
   @override
   Widget build(BuildContext context) {
@@ -45,6 +53,13 @@ final class TransactionDetailsView extends StatelessWidget {
             label: TransactionStrings.date,
             value: AppFormatters.date(transaction.transactionDate),
           ),
+          if (RecurringExpenseOccurrence.dueDateOf(transaction.id)
+              case final dueDate?
+              when !DateUtils.isSameDay(dueDate, transaction.transactionDate))
+            _DetailRow(
+              label: TransactionStrings.dueDate,
+              value: AppFormatters.date(dueDate),
+            ),
           _DetailRow(
             label: transaction.isCustomerCreditExpense
                 ? TransactionStrings.openAccountCustomer
@@ -53,6 +68,8 @@ final class TransactionDetailsView extends StatelessWidget {
                 : TransactionStrings.creditCard,
             value: transaction.isCustomerCreditExpense
                 ? TransactionStrings.openAccount
+                : sourceName != null
+                ? sourceName!
                 : transaction.accountId != null
                 ? AccountStrings.nameFromId(transaction.accountId!)
                 : TransactionStrings.creditCardName(transaction.creditCardId!),

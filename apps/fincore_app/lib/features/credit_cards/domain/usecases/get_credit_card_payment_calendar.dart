@@ -82,11 +82,19 @@ final class GetCreditCardPaymentCalendarUseCase {
         continue;
       }
 
+      final statements = statementsByCard[card.id] ?? const [];
+      // Statement lines are counted from the statement itself below.
+      if (statements.any(
+        (statement) =>
+            statement.lines.any((line) => line.transactionId == transaction.id),
+      )) {
+        continue;
+      }
       final period = CreditCardPeriodCalculator.transactionPeriod(
         transactionId: transaction.id,
-        transactionDate: transaction.transactionDate,
+        transactionDate: _effectiveDate(transaction, statements),
         statementDay: card.statementDay,
-        statements: statementsByCard[card.id] ?? const [],
+        statements: statements,
       );
       if (period.isBefore(firstVisibleMonth)) continue;
       final bucket = monthBuckets.putIfAbsent((
@@ -104,16 +112,31 @@ final class GetCreditCardPaymentCalendarUseCase {
 
     for (final card in creditCards) {
       for (final statement in statementsByCard[card.id] ?? const []) {
-        final period = DateTime(
-          statement.statementDate.year,
-          statement.statementDate.month,
+        final period = CreditCardPeriodCalculator.statementPeriod(
+          statementDate: statement.statementDate,
+          statementDay: card.statementDay,
         );
         if (period.isBefore(firstVisibleMonth)) continue;
         final paidCents = InstallmentCalculator.toCents(
           paidByStatement[statement.id] ?? 0,
         );
-        final bucket = monthBuckets[(period.year, period.month)];
-        bucket?.addPaid(
+        final bucket = monthBuckets.putIfAbsent((
+          period.year,
+          period.month,
+        ), _MonthBucket.new);
+        // A cut statement is what the bank billed and what gets paid, so its
+        // total stands even if a line's transaction was later edited away.
+        if (statement.totalAmount > 0) {
+          bucket.add(
+            currencyCode: card.currencyCode,
+            amount: statement.totalAmount,
+            detailKey: (CreditCardPaymentDetailKind.creditCard, card.id),
+            detailLabel: _cardLabel(card),
+            planned: false,
+            count: statement.lines.length,
+          );
+        }
+        bucket.addPaid(
           currencyCode: card.currencyCode,
           cents: paidCents,
           detailKey: (CreditCardPaymentDetailKind.creditCard, card.id),
@@ -138,7 +161,10 @@ final class GetCreditCardPaymentCalendarUseCase {
         customerNames: customerNames,
       );
       for (final dueDate in plan.dueDates) {
-        if (dueDate.isBefore(firstVisibleMonth)) continue;
+        // An occurrence shows in the month it is posted to the ledger; for
+        // plans posted ahead of their due date that is the earlier month.
+        final movementDate = plan.movementDate(dueDate);
+        if (movementDate.isBefore(firstVisibleMonth)) continue;
         final realized = existingTransactionIds.contains(
           RecurringExpenseOccurrence.transactionId(
             planId: plan.id,
@@ -146,8 +172,8 @@ final class GetCreditCardPaymentCalendarUseCase {
           ),
         );
         final bucket = monthBuckets.putIfAbsent((
-          dueDate.year,
-          dueDate.month,
+          movementDate.year,
+          movementDate.month,
         ), _MonthBucket.new);
         bucket.add(
           currencyCode: plan.currencyCode,
@@ -330,6 +356,34 @@ final class GetCreditCardPaymentCalendarUseCase {
     );
   }
 
+  /// Date that decides a card charge's period. A charge left off every
+  /// statement although a later statement was already cut is carried into
+  /// the open period after the latest statement, matching the card's current
+  /// debt; a closed, paid month can never settle it.
+  static DateTime _effectiveDate(
+    Transaction transaction,
+    List<CreditCardStatement> statements,
+  ) {
+    if (statements.isEmpty ||
+        statements.any(
+          (statement) => statement.lines.any(
+            (line) => line.transactionId == transaction.id,
+          ),
+        )) {
+      return transaction.transactionDate;
+    }
+    final latest = statements
+        .map((statement) => _dateOnly(statement.statementDate))
+        .reduce((left, right) => left.isAfter(right) ? left : right);
+    final date = _dateOnly(transaction.transactionDate);
+    return date.isAfter(latest)
+        ? transaction.transactionDate
+        : DateTime(latest.year, latest.month, latest.day + 1);
+  }
+
+  static DateTime _dateOnly(DateTime value) =>
+      DateTime(value.year, value.month, value.day);
+
   static String _cardLabel(CreditCard card) =>
       'Kredi Kartı • ${card.bankName} ${card.cardName} • ****${card.lastFourDigits}';
 
@@ -356,11 +410,12 @@ final class _MonthBucket {
     required String detailLabel,
     required bool planned,
     int paidCents = 0,
+    int count = 1,
   }) {
     final cents = InstallmentCalculator.toCents(amount.abs());
     final paid = paidCents.clamp(0, cents);
-    transactionCount++;
-    if (planned) plannedExpenseCount++;
+    transactionCount += count;
+    if (planned) plannedExpenseCount += count;
     centsByCurrency.update(
       currencyCode,
       (value) => value + cents,
@@ -373,6 +428,7 @@ final class _MonthBucket {
           cents: cents,
           planned: planned,
           paidCents: paid,
+          count: count,
         );
     if (paid > 0) {
       paidCentsByCurrency.update(
@@ -413,9 +469,10 @@ final class _DetailBucket {
     required int cents,
     required bool planned,
     required int paidCents,
+    int count = 1,
   }) {
-    transactionCount++;
-    if (planned) plannedExpenseCount++;
+    transactionCount += count;
+    if (planned) plannedExpenseCount += count;
     centsByCurrency.update(
       currencyCode,
       (value) => value + cents,

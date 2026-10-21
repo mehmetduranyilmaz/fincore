@@ -10,6 +10,7 @@ final class RecurringExpensePlan {
     required this.currencyCode,
     required DateTime firstDueDate,
     required this.occurrenceCount,
+    this.movementMonthsBeforeDue = 0,
   }) : firstDueDate = DateTime(
          firstDueDate.year,
          firstDueDate.month,
@@ -23,13 +24,16 @@ final class RecurringExpensePlan {
         description.trim().isEmpty ||
         currencyCode.trim().isEmpty ||
         occurrenceCount < minimumOccurrenceCount ||
-        occurrenceCount > maximumOccurrenceCount) {
+        occurrenceCount > maximumOccurrenceCount ||
+        movementMonthsBeforeDue < 0 ||
+        movementMonthsBeforeDue > maximumMovementMonthsBeforeDue) {
       throw ArgumentError('Invalid recurring expense plan.');
     }
   }
 
   static const int minimumOccurrenceCount = 2;
   static const int maximumOccurrenceCount = 60;
+  static const int maximumMovementMonthsBeforeDue = 12;
 
   final String id;
   final String? accountId;
@@ -41,6 +45,24 @@ final class RecurringExpensePlan {
   final String currencyCode;
   final DateTime firstDueDate;
   final int occurrenceCount;
+
+  /// How many months before its due date an occurrence is posted to the
+  /// ledger. The due date still drives the payment calendar, like a card
+  /// charge that is booked in one month and paid the next.
+  final int movementMonthsBeforeDue;
+
+  DateTime movementDate(DateTime dueDate) {
+    final targetMonth = DateTime(
+      dueDate.year,
+      dueDate.month - movementMonthsBeforeDue,
+    );
+    final lastDay = DateTime(targetMonth.year, targetMonth.month + 1, 0).day;
+    return DateTime(
+      targetMonth.year,
+      targetMonth.month,
+      dueDate.day.clamp(1, lastDay),
+    );
+  }
 
   Iterable<DateTime> get dueDates sync* {
     for (var index = 0; index < occurrenceCount; index++) {

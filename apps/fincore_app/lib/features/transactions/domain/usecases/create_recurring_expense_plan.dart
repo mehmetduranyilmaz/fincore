@@ -53,6 +53,7 @@ final class CreateRecurringExpensePlanUseCase {
       currencyCode: currencyCode,
       firstDueDate: input.firstDueDate,
       occurrenceCount: input.occurrenceCount,
+      movementMonthsBeforeDue: input.movementMonthsBeforeDue,
     );
     await _repository.create(plan);
     return plan;

@@ -43,6 +43,11 @@ abstract final class TransactionStrings {
   static const String recurringExpenseHint =
       'Gelecek aylar ödeme takviminde planlanan gider olarak görünür; vadesinden önce gerçek bakiyeleri etkilemez.';
   static const String saveRecurringExpense = 'Gider Planını Kaydet';
+  static const String movementOneMonthEarly =
+      'Hareket tarihi vadeden 1 ay önce';
+  static const String movementOneMonthEarlyHint =
+      'Kayıt, vadesinden bir ay önceki tarihle hareketlere ve ödeme takviminde o aya işlenir; ödemeler taksitlere sırayla düşer.';
+  static const String dueDate = 'Vade';
   static const String manageRecurringExpenses = 'Tekrarlayan Giderler';
   static const String recurringExpensesDescription =
       'Aylık ödeme takvimine yansıyan planları buradan değiştirebilir veya silebilirsiniz.';

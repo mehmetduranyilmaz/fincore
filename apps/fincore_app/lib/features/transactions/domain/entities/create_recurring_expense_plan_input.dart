@@ -8,6 +8,7 @@ final class CreateRecurringExpensePlanInput {
     required this.categoryId,
     required this.firstDueDate,
     required this.occurrenceCount,
+    this.movementMonthsBeforeDue = 0,
   });
 
   final String? accountId;
@@ -18,4 +19,5 @@ final class CreateRecurringExpensePlanInput {
   final String? categoryId;
   final DateTime firstDueDate;
   final int occurrenceCount;
+  final int movementMonthsBeforeDue;
 }

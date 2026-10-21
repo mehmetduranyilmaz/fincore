@@ -306,7 +306,8 @@ final class _PaymentMonthRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final percentage = (month.completionRatio * 100).round();
+    // Floor so a month with any unpaid remainder never reads as %100.
+    final percentage = (month.completionRatio * 100).floor();
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Column(

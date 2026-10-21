@@ -6,20 +6,16 @@ import 'package:fincore_app/features/credit_cards/domain/services/credit_card_st
 import 'package:fincore_app/features/transactions/domain/entities/transaction_type.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
 
-typedef CreditCardBalanceClock = DateTime Function();
-
 final class CalculateCreditCardBalanceUseCase {
   CalculateCreditCardBalanceUseCase(
     this._creditCardRepository,
     this._transactionRepository, {
     this._statementRepository,
-    CreditCardBalanceClock? clock,
-  }) : _clock = clock ?? DateTime.now;
+  });
 
   final CreditCardRepository _creditCardRepository;
   final TransactionRepository _transactionRepository;
   final CreditCardStatementRepository? _statementRepository;
-  final CreditCardBalanceClock _clock;
 
   Future<CreditCardBalance> execute(String creditCardId) async {
     if (creditCardId.trim().isEmpty) {
@@ -86,13 +82,13 @@ final class CalculateCreditCardBalanceUseCase {
       final paid = paidByStatement[statement.id] ?? 0.0;
       currentDebt += (statement.totalAmount - paid).clamp(0.0, double.infinity);
     }
-    final now = _clock();
+    // Current debt is everything still owed on the card: unpaid statement
+    // balances, the open period and installments of future months.
     for (final transaction in transactions) {
       if (transaction.isDeleted ||
           transaction.creditCardId != creditCardId ||
           assignedIds.contains(transaction.id) ||
-          transaction.isCreditCardDebtPayment ||
-          transaction.transactionDate.isAfter(now)) {
+          transaction.isCreditCardDebtPayment) {
         continue;
       }
       switch (transaction.transactionType) {

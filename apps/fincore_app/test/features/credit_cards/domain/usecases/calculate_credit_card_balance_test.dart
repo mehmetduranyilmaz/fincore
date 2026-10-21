@@ -67,7 +67,7 @@ void main() {
   });
 
   test(
-    'moves a due installment into current debt while preserving limit exposure',
+    'current debt is unpaid statements plus open period plus future installments',
     () async {
       final statementExpense = _transaction(
         id: 'statement-expense',
@@ -91,6 +91,7 @@ void main() {
         amount: 2000,
         type: TransactionType.expense,
         installment: true,
+        date: DateTime(2027, 1, 25),
       );
       final useCase = CalculateCreditCardBalanceUseCase(
         const _CreditCardRepository([_creditCard]),
@@ -117,7 +118,6 @@ void main() {
             ],
           ),
         ]),
-        clock: () => DateTime(2026, 9, 2),
       );
 
       final result = await useCase.execute(_creditCard.id);
@@ -149,6 +149,7 @@ Transaction _transaction({
   bool installment = false,
   String? paymentGroupId,
   String? statementId,
+  DateTime? date,
 }) {
   return Transaction(
     id: id,
@@ -159,7 +160,7 @@ Transaction _transaction({
     categoryId: null,
     merchant: id,
     note: null,
-    transactionDate: DateTime(2026, 7, 25),
+    transactionDate: date ?? DateTime(2026, 7, 25),
     source: TransactionSource.import,
     isDeleted: isDeleted,
     transferGroupId: type == TransactionType.transfer ? 'group-$id' : null,

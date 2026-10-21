@@ -70,6 +70,7 @@ final class UpdateRecurringExpensePlanUseCase {
       currencyCode: await _resolveCurrency(input),
       firstDueDate: input.firstDueDate,
       occurrenceCount: input.occurrenceCount,
+      movementMonthsBeforeDue: input.movementMonthsBeforeDue,
     );
     await _repository.update(updated);
     return updated;

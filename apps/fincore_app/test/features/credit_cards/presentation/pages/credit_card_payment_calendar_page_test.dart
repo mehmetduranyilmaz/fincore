@@ -84,6 +84,55 @@ void main() {
 
     expect(find.text('Müşteri • Mehmet Eğitim'), findsOneWidget);
   });
+
+  testWidgets('a month with an unpaid remainder never shows %100', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final september = CreditCardPaymentMonth(
+      year: 2026,
+      month: 9,
+      totalsByCurrency: const {'TRY': 15989.70},
+      paidByCurrency: const {'TRY': 15947.45},
+      transactionCount: 2,
+      details: [
+        CreditCardPaymentDetail(
+          sourceId: 'kuveyt',
+          kind: CreditCardPaymentDetailKind.creditCard,
+          label: 'Kredi Kartı • Kuveyt Türk',
+          totalsByCurrency: const {'TRY': 42.25},
+          transactionCount: 1,
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          creditCardPaymentCalendarProvider.overrideWith(
+            (ref) async => CreditCardPaymentCalendar([
+              CreditCardPaymentYear(
+                year: 2026,
+                months: [september],
+                totalsByCurrency: const {'TRY': 15989.70},
+              ),
+            ]),
+          ),
+        ],
+        child: MaterialApp(
+          theme: AppTheme.light,
+          home: CreditCardPaymentCalendarPage(referenceDate: DateTime(2026, 9)),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('%99 tamamlandı'), findsOneWidget);
+    expect(find.text('Kalan: 42,25 ₺'), findsOneWidget);
+  });
 }
 
 final _calendar = CreditCardPaymentCalendar([

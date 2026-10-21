@@ -16,6 +16,7 @@ final class RecurringExpensePlanDto {
         currencyCode: json['currencyCode']! as String,
         firstDueDate: DateTime.parse(json['firstDueDate']! as String),
         occurrenceCount: json['occurrenceCount']! as int,
+        movementMonthsBeforeDue: json['movementMonthsBeforeDue'] as int? ?? 0,
       ),
     );
   }
@@ -34,6 +35,7 @@ final class RecurringExpensePlanDto {
       'currencyCode': plan.currencyCode,
       'firstDueDate': plan.firstDueDate.toIso8601String(),
       'occurrenceCount': plan.occurrenceCount,
+      'movementMonthsBeforeDue': plan.movementMonthsBeforeDue,
     };
   }
 }
