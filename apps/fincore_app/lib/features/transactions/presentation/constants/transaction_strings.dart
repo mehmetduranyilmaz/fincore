@@ -60,7 +60,7 @@ abstract final class TransactionStrings {
   static const String installmentNumber = 'Taksit';
   static const String rescheduleInstallments = 'Taksit Tarihlerini Değiştir';
   static const String rescheduleInstallmentsHint =
-      'Henüz ekstresi kesilmemiş gelecek taksitlerin tarihlerini değiştirebilirsiniz. Tarih, taksitin hangi döneme yansıyacağını belirler.';
+      'Henüz ekstresi kesilmemiş gelecek taksitlerin tarihlerini değiştirebilirsiniz. Yeni tarih bir önceki taksitten ve son kesilen ekstreden sonra olmalıdır. Tarih, taksitin hangi döneme yansıyacağını belirler.';
   static const String installmentLocked = 'Değiştirilemez';
   static const String installmentDatesOrder =
       'Taksit tarihleri sıralı olmalı; her taksit bir öncekinden sonra gelmelidir.';

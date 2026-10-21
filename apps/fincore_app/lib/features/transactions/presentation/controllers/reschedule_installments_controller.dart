@@ -9,10 +9,12 @@ final class InstallmentPlanSchedule {
   const InstallmentPlanSchedule({
     required this.installments,
     required this.reschedulableIds,
+    this.earliestDate,
   });
 
   final List<Transaction> installments;
   final Set<String> reschedulableIds;
+  final DateTime? earliestDate;
 }
 
 final installmentPlanScheduleProvider =
@@ -25,6 +27,7 @@ final installmentPlanScheduleProvider =
       return InstallmentPlanSchedule(
         installments: installments,
         reschedulableIds: await useCase.reschedulableIds(installments),
+        earliestDate: await useCase.earliestDate(installments),
       );
     });
 

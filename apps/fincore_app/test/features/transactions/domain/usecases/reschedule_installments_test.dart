@@ -69,6 +69,21 @@ void main() {
     expect(repository.byId('tx-1').transactionDate, DateTime(2026, 9, 15));
   });
 
+  test('moves an installment earlier, down to the day after the last cut '
+      'statement', () async {
+    final plan = await useCase.getPlan('plan-1');
+    expect(await useCase.earliestDate(plan), DateTime(2026, 10, 21));
+
+    await useCase.execute(
+      RescheduleInstallmentsInput(
+        installmentPlanId: 'plan-1',
+        datesByTransactionId: {'tx-3': DateTime(2026, 10, 21)},
+      ),
+    );
+
+    expect(repository.byId('tx-3').transactionDate, DateTime(2026, 10, 21));
+  });
+
   test('rejects locked installments, past dates and unordered dates', () async {
     Future<void> run(Map<String, DateTime> dates) => useCase.execute(
       RescheduleInstallmentsInput(

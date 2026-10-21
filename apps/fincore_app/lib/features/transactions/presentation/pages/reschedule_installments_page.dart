@@ -146,7 +146,7 @@ final class _RescheduleInstallmentsPageState
                       editable:
                           !isLoading &&
                           schedule.reschedulableIds.contains(item.id),
-                      onTap: () => _pickDate(item),
+                      onTap: () => _pickDate(item, schedule),
                     ),
                   if (_validationMessage ?? errorMessage case final message?)
                     Padding(
@@ -186,15 +186,41 @@ final class _RescheduleInstallmentsPageState
     );
   }
 
-  Future<void> _pickDate(Transaction installment) async {
-    final today = DateTime.now();
-    final tomorrow = DateTime(today.year, today.month, today.day + 1);
-    final current = _dates[installment.id] ?? installment.transactionDate;
+  Future<void> _pickDate(
+    Transaction installment,
+    InstallmentPlanSchedule schedule,
+  ) async {
+    // Keep the plan ordered: the picker only offers days between the
+    // neighbouring installments and after the latest cut statement.
+    final index = schedule.installments.indexOf(installment);
+    DateTime dateAt(int i) => DateUtils.dateOnly(
+      _dates[schedule.installments[i].id] ??
+          schedule.installments[i].transactionDate,
+    );
+    var firstDate = schedule.earliestDate ?? DateTime(2000);
+    if (index > 0) {
+      final afterPrevious = DateUtils.addDaysToDate(dateAt(index - 1), 1);
+      if (afterPrevious.isAfter(firstDate)) firstDate = afterPrevious;
+    }
+    final lastDate = index < schedule.installments.length - 1
+        ? DateUtils.addDaysToDate(dateAt(index + 1), -1)
+        : DateTime(DateTime.now().year + 10, 12, 31);
+    if (lastDate.isBefore(firstDate)) {
+      setState(
+        () => _validationMessage = TransactionStrings.installmentDatesOrder,
+      );
+      return;
+    }
+    final current = dateAt(index);
     final selected = await showDatePicker(
       context: context,
-      firstDate: tomorrow,
-      lastDate: DateTime(today.year + 10, 12, 31),
-      initialDate: current.isBefore(tomorrow) ? tomorrow : current,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      initialDate: current.isBefore(firstDate)
+          ? firstDate
+          : current.isAfter(lastDate)
+          ? lastDate
+          : current,
     );
     if (selected == null || !mounted) return;
     setState(() {

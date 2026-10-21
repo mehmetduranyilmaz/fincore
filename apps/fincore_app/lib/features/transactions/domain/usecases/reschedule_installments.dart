@@ -1,3 +1,4 @@
+import 'package:fincore_app/features/credit_cards/domain/entities/credit_card_statement.dart';
 import 'package:fincore_app/features/credit_cards/domain/repositories/credit_card_statement_repository.dart';
 import 'package:fincore_app/features/transactions/domain/entities/transaction.dart';
 import 'package:fincore_app/features/transactions/domain/repositories/transaction_repository.dart';
@@ -47,7 +48,10 @@ final class RescheduleInstallmentsUseCase {
   /// already part of a cut credit card statement.
   Future<Set<String>> reschedulableIds(List<Transaction> installments) async {
     final today = _dateOnly(_clock());
-    final statementLineIds = await _statementLineIds(installments);
+    final statementLineIds = {
+      for (final statement in await _statements(installments))
+        for (final line in statement.lines) line.transactionId,
+    };
     return {
       for (final item in installments)
         if (_dateOnly(item.transactionDate).isAfter(today) &&
@@ -56,18 +60,32 @@ final class RescheduleInstallmentsUseCase {
     };
   }
 
+  /// Earliest date an installment may be moved to: the day after the latest
+  /// cut statement of the plan's card, so it cannot land in a closed period.
+  /// Null when no statement has been cut yet.
+  Future<DateTime?> earliestDate(List<Transaction> installments) async {
+    DateTime? latest;
+    for (final statement in await _statements(installments)) {
+      final date = _dateOnly(statement.statementDate);
+      if (latest == null || date.isAfter(latest)) latest = date;
+    }
+    return latest == null
+        ? null
+        : DateTime(latest.year, latest.month, latest.day + 1);
+  }
+
   Future<List<Transaction>> execute(RescheduleInstallmentsInput input) async {
     final installments = await getPlan(input.installmentPlanId);
     if (installments.isEmpty) {
       throw StateError('Installment plan not found.');
     }
     final allowedIds = await reschedulableIds(installments);
-    final today = _dateOnly(_clock());
+    final earliest = await earliestDate(installments);
     for (final entry in input.datesByTransactionId.entries) {
       if (!allowedIds.contains(entry.key)) {
         throw ArgumentError.value(entry.key, 'transactionId');
       }
-      if (!_dateOnly(entry.value).isAfter(today)) {
+      if (earliest != null && _dateOnly(entry.value).isBefore(earliest)) {
         throw ArgumentError.value(entry.value, 'date');
       }
     }
@@ -100,15 +118,16 @@ final class RescheduleInstallmentsUseCase {
     return List.unmodifiable(changed);
   }
 
-  Future<Set<String>> _statementLineIds(List<Transaction> installments) async {
+  Future<List<CreditCardStatement>> _statements(
+    List<Transaction> installments,
+  ) async {
     final repository = _statementRepository;
-    if (repository == null) return const {};
+    if (repository == null) return const [];
     final cardIds = installments.map((item) => item.creditCardId).nonNulls;
-    return {
+    return [
       for (final cardId in cardIds.toSet())
-        for (final statement in await repository.getByCreditCardId(cardId))
-          for (final line in statement.lines) line.transactionId,
-    };
+        ...await repository.getByCreditCardId(cardId),
+    ];
   }
 
   static Transaction _withDate(Transaction item, DateTime date) {
